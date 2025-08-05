@@ -76,8 +76,7 @@ struct CircularButtonStyle: ButtonStyle {
 struct NumberPadButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.title2)
-            .fontWeight(.medium)
+            .font(.system(size: 22, weight: .medium))
             .foregroundColor(Color.theme.onBackground)
             .frame(maxWidth: .infinity, minHeight: 60)
             .background(Color.clear)

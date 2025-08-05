@@ -23,6 +23,7 @@ struct BalanceView: View {
 struct BalanceToolbarModifier: ViewModifier {
     let balance: String
     @State private var showingMintsDrawer = false
+    @State private var showingDepositSheet = false
     
     func body(content: Content) -> some View {
         content
@@ -46,7 +47,7 @@ struct BalanceToolbarModifier: ViewModifier {
                             .foregroundColor(Color.orange)
                         
                         Button(action: {
-                            // Add mint action
+                            showingDepositSheet = true
                         }) {
                             Image(systemName: "plus.circle")
                                 .foregroundColor(.orange)
@@ -65,6 +66,44 @@ struct BalanceToolbarModifier: ViewModifier {
             }
             .sheet(isPresented: $showingMintsDrawer) {
                 MintsDrawerView()
+            }
+            .adaptiveSheet(isPresent: $showingDepositSheet) {
+                DepositSheetView()
+            }
+    }
+}
+
+extension View {
+    func adaptiveSheet<Content: View>(
+        isPresent: Binding<Bool>, 
+        @ViewBuilder sheetContent: () -> Content
+    ) -> some View {
+        modifier(AdaptiveSheetModifier(isPresented: isPresent, sheetContent: sheetContent()))
+    }
+}
+
+struct AdaptiveSheetModifier<SheetContent: View>: ViewModifier {
+    @Binding var isPresented: Bool
+    @State private var subHeight: CGFloat = 400
+    var sheetContent: SheetContent
+
+    func body(content: Content) -> some View {
+        content
+            .sheet(isPresented: $isPresented) {
+                sheetContent
+                    .background(
+                        GeometryReader { proxy in
+                            Color.clear
+                                .onAppear {
+                                    subHeight = proxy.size.height
+                                }
+                                .onChange(of: proxy.size.height) { newHeight in
+                                    subHeight = newHeight
+                                }
+                        }
+                    )
+                    .presentationDetents([.height(subHeight)])
+                    .presentationDragIndicator(.visible)
             }
     }
 }

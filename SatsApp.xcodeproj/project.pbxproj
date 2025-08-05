@@ -17,6 +17,9 @@
 		B12345678901ABD7 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B12345678901ABD6 /* Preview Assets.xcassets */; };
 		B12345678901ABE1 /* BalanceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABE0 /* BalanceView.swift */; };
 		B12345678901ABE3 /* WalletManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABE2 /* WalletManager.swift */; };
+		B12345678901ABE5 /* DepositSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABE4 /* DepositSheetView.swift */; };
+		B12345678901ABE7 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABE6 /* Theme.swift */; };
+		B12345678901ABE9 /* WalletLoadingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABE8 /* WalletLoadingView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -29,6 +32,9 @@
 		B12345678901ABD6 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		B12345678901ABE0 /* BalanceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BalanceView.swift; sourceTree = "<group>"; };
 		B12345678901ABE2 /* WalletManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalletManager.swift; sourceTree = "<group>"; };
+		B12345678901ABE4 /* DepositSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DepositSheetView.swift; sourceTree = "<group>"; };
+		B12345678901ABE6 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		B12345678901ABE8 /* WalletLoadingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalletLoadingView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -69,6 +75,9 @@
 				B12345678901ABD2 /* ActivityView.swift */,
 				B12345678901ABE0 /* BalanceView.swift */,
 				B12345678901ABE2 /* WalletManager.swift */,
+				B12345678901ABE4 /* DepositSheetView.swift */,
+				B12345678901ABE6 /* Theme.swift */,
+				B12345678901ABE8 /* WalletLoadingView.swift */,
 				B12345678901ABD4 /* Assets.xcassets */,
 				B12345678901ABD8 /* Preview Content */,
 			);
@@ -161,6 +170,9 @@
 				B12345678901ABD3 /* ActivityView.swift in Sources */,
 				B12345678901ABE1 /* BalanceView.swift in Sources */,
 				B12345678901ABE3 /* WalletManager.swift in Sources */,
+				B12345678901ABE5 /* DepositSheetView.swift in Sources */,
+				B12345678901ABE7 /* Theme.swift in Sources */,
+				B12345678901ABE9 /* WalletLoadingView.swift in Sources */,
 				B12345678901ABCD /* SatsAppApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -220,7 +232,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -277,7 +289,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
