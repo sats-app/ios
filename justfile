@@ -96,11 +96,22 @@ deps:
 update-deps:
     #!/bin/bash
     echo "Updating Swift package dependencies..."
-    # Remove resolved file to force fresh resolution
+    
+    # Remove the Package.resolved file to force fetching latest versions
     rm -f SatsApp.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
-    # Resolve with fresh state
-    xcodebuild -resolvePackageDependencies
+    
+    # Clear the SPM cache to ensure we get the latest version
+    rm -rf ~/Library/Caches/org.swift.swiftpm
+    rm -rf ~/Library/Developer/Xcode/DerivedData/SatsApp-*
+    
+    # Resolve dependencies fresh - this will fetch the latest commit from the branch
+    xcodebuild -resolvePackageDependencies -project SatsApp.xcodeproj
+    
+    echo ""
     echo "Dependencies updated successfully!"
+    echo ""
+    echo "Updated packages:"
+    just show-deps
 
 # Show current dependency versions
 show-deps:
