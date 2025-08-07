@@ -25,7 +25,6 @@ enum TransactionStatus {
 struct ActivityView: View {
     @EnvironmentObject var walletManager: WalletManager
     @State private var transactions: [Transaction] = []
-    @State private var balance: UInt64 = 0
     @State private var isLoading = true
     
     var body: some View {
@@ -52,7 +51,7 @@ struct ActivityView: View {
                     }
                 }
             }
-            .balanceToolbar("\(balance) sat")
+            .balanceToolbar()
             .refreshable {
                 await loadData()
             }
@@ -68,13 +67,11 @@ struct ActivityView: View {
         }
         
         async let transactionsResult = walletManager.listTransactions()
-        async let balanceResult = walletManager.getBalance()
-        
-        let (loadedTransactions, loadedBalance) = await (transactionsResult, balanceResult)
+        let loadedTransactions = await transactionsResult
+        await walletManager.refreshBalance()
         
         await MainActor.run {
             self.transactions = loadedTransactions
-            self.balance = loadedBalance
             self.isLoading = false
         }
     }

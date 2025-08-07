@@ -32,7 +32,6 @@ struct TransactView: View {
     @State private var amount: String = "0"
     @State private var showingTransactSheet = false
     @State private var transactMode: TransactMode = .pay
-    @State private var balance: UInt64 = 0
     
     var body: some View {
         NavigationView {
@@ -84,7 +83,7 @@ struct TransactView: View {
                 .padding(.horizontal)
                 .padding(.bottom, 20)
             }
-            .balanceToolbar("\(balance) sat")
+            .balanceToolbar()
             .sheet(isPresented: $showingTransactSheet, onDismiss: {
                 amount = "0"
             }) {
@@ -92,22 +91,10 @@ struct TransactView: View {
             }
         }
         .task {
-            await loadBalance()
+            await walletManager.refreshBalance()
         }
     }
     
-    private func loadBalance() async {
-        guard let wallet = walletManager.wallet else { return }
-        
-        do {
-            let walletBalance = try await wallet.totalBalance()
-            await MainActor.run {
-                balance = walletBalance.value
-            }
-        } catch {
-            print("Failed to get balance: \(error)")
-        }
-    }
 }
 
 struct NumberPadView: View {

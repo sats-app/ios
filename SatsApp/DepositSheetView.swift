@@ -1,6 +1,7 @@
 import CoreImage
 import CoreImage.CIFilterBuiltins
 import SwiftUI
+import os.log
 
 
 struct DepositSheetView: View {
@@ -10,16 +11,31 @@ struct DepositSheetView: View {
     @State private var isLoading = false
     @State private var depositRequest: String?
     @State private var mintQuoteStatus: String?
+    @State private var quoteId: String?
+    @State private var isPolling = false
+    @State private var isMinting = false
+    @State private var mintedAmount: UInt64?
     @State private var showingError = false
     @State private var errorMessage = ""
+    @State private var pollTimer: Timer?
 
     private enum ViewState {
         case amountInput
         case depositRequest
+        case minting
+        case completed
     }
 
     private var currentState: ViewState {
-        depositRequest != nil ? .depositRequest : .amountInput
+        if mintedAmount != nil {
+            return .completed
+        } else if isMinting {
+            return .minting
+        } else if depositRequest != nil {
+            return .depositRequest
+        } else {
+            return .amountInput
+        }
     }
 
     var body: some View {
@@ -29,6 +45,10 @@ struct DepositSheetView: View {
                 amountInputView
             case .depositRequest:
                 depositRequestView
+            case .minting:
+                mintingView
+            case .completed:
+                completedView
             }
         }
         .alert("Error", isPresented: $showingError) {
@@ -114,12 +134,91 @@ struct DepositSheetView: View {
                         }
 
                         // Status
-                        if let status = mintQuoteStatus {
-                            Text("Status: \(status)")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
+                        VStack(spacing: 8) {
+                            if let status = mintQuoteStatus {
+                                HStack {
+                                    Circle()
+                                        .fill(status == "Paid" ? Color.green : (status == "Pending" ? Color.orange : Color.red))
+                                        .frame(width: 8, height: 8)
+                                    Text("Status: \(status)")
+                                        .font(.subheadline)
+                                        .foregroundColor(.primary)
+                                }
+                            }
+                            
+                            if isPolling {
+                                HStack {
+                                    ProgressView()
+                                        .scaleEffect(0.8)
+                                    Text("Checking payment status...")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
                         }
                     }
+                }
+            }
+
+            Button("Cancel") {
+                stopPolling()
+                dismiss()
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 50)
+            .background(Color.gray)
+            .foregroundColor(.white)
+            .cornerRadius(12)
+            .font(.headline)
+        }
+        .padding(20)
+        .onAppear {
+            if depositRequest != nil && quoteId != nil {
+                startPolling()
+            }
+        }
+        .onDisappear {
+            stopPolling()
+        }
+    }
+
+    private var mintingView: some View {
+        VStack(spacing: 20) {
+            VStack(spacing: 16) {
+                Text("Minting Tokens")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+
+                ProgressView()
+                    .scaleEffect(1.5)
+                    .padding()
+
+                Text("Processing your payment...")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(20)
+    }
+
+    private var completedView: some View {
+        VStack(spacing: 20) {
+            VStack(spacing: 16) {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(.green)
+                    .font(.system(size: 60))
+
+                Text("Tokens Minted Successfully!")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+
+                if let minted = mintedAmount {
+                    Text("Minted: \(minted) sats")
+                        .font(.title3)
+                        .fontWeight(.medium)
+                        .foregroundColor(.orange)
                 }
             }
 
@@ -153,13 +252,17 @@ struct DepositSheetView: View {
 
         Task {
             do {
-                let (request, status) = try await walletManager.generateMintQuote(
+                let (request, status, id) = try await walletManager.generateMintQuote(
                     amount: amountValue)
 
                 await MainActor.run {
                     self.depositRequest = request
                     self.mintQuoteStatus = status
+                    self.quoteId = id
                     self.isLoading = false
+                    
+                    // Start polling for payment status
+                    startPolling()
                 }
             } catch {
                 await MainActor.run {
@@ -190,6 +293,73 @@ struct DepositSheetView: View {
     private func showError(_ message: String) {
         errorMessage = message
         showingError = true
+    }
+    
+    private func startPolling() {
+        guard !isPolling, let quoteId = quoteId else { return }
+        
+        isPolling = true
+        
+        pollTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { _ in
+            Task {
+                await checkQuoteStatus(quoteId: quoteId)
+            }
+        }
+        
+        // Check immediately
+        Task {
+            await checkQuoteStatus(quoteId: quoteId)
+        }
+    }
+    
+    private func stopPolling() {
+        isPolling = false
+        pollTimer?.invalidate()
+        pollTimer = nil
+    }
+    
+    private func checkQuoteStatus(quoteId: String) async {
+        do {
+            let status = try await walletManager.checkMintQuoteStatus(quoteId: quoteId)
+            
+            await MainActor.run {
+                self.mintQuoteStatus = status
+                
+                if status == "Paid" {
+                    stopPolling()
+                    performMinting(quoteId: quoteId)
+                }
+            }
+        } catch {
+            await MainActor.run {
+                AppLogger.mint.error("Failed to check quote status: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    private func performMinting(quoteId: String) {
+        guard !isMinting else { return }
+        
+        isMinting = true
+        
+        Task {
+            do {
+                let mintedAmount = try await walletManager.mintTokens(quoteId: quoteId)
+                
+                await MainActor.run {
+                    self.mintedAmount = mintedAmount
+                    self.isMinting = false
+                }
+                
+                // Refresh the balance in WalletManager
+                await walletManager.refreshBalance()
+            } catch {
+                await MainActor.run {
+                    self.isMinting = false
+                    showError("Failed to mint tokens: \(error.localizedDescription)")
+                }
+            }
+        }
     }
 }
 

@@ -1,5 +1,36 @@
 import SwiftUI
 
+struct AnimatedBalanceText: View {
+    let balance: String
+    @State private var animateBalance = false
+    @State private var previousBalance = ""
+    
+    var body: some View {
+        Text(balance)
+            .font(.headline)
+            .fontWeight(.medium)
+            .foregroundColor(Color.orange)
+            .scaleEffect(animateBalance ? 1.1 : 1.0)
+            .animation(.spring(response: 0.4, dampingFraction: 0.6), value: animateBalance)
+            .onChange(of: balance) { newBalance in
+                if previousBalance != newBalance && !previousBalance.isEmpty {
+                    // Animate when balance changes
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+                        animateBalance = true
+                    }
+                    
+                    // Reset animation after a short delay
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+                            animateBalance = false
+                        }
+                    }
+                }
+                previousBalance = newBalance
+            }
+    }
+}
+
 struct BalanceView: View {
     let balance: String
     
@@ -21,7 +52,7 @@ struct BalanceView: View {
 }
 
 struct BalanceToolbarModifier: ViewModifier {
-    let balance: String
+    @EnvironmentObject var walletManager: WalletManager
     @State private var showingMintsDrawer = false
     @State private var showingDepositSheet = false
     
@@ -41,10 +72,7 @@ struct BalanceToolbarModifier: ViewModifier {
                 
                 ToolbarItem(placement: .principal) {
                     HStack {
-                        Text(balance)
-                            .font(.headline)
-                            .fontWeight(.medium)
-                            .foregroundColor(Color.orange)
+                        AnimatedBalanceText(balance: walletManager.formattedBalance)
                         
                         Button(action: {
                             showingDepositSheet = true
@@ -159,7 +187,7 @@ struct MintInfo {
 }
 
 extension View {
-    func balanceToolbar(_ balance: String) -> some View {
-        modifier(BalanceToolbarModifier(balance: balance))
+    func balanceToolbar() -> some View {
+        modifier(BalanceToolbarModifier())
     }
 }

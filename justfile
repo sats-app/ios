@@ -56,7 +56,22 @@ run:
         build
     
     xcrun simctl install "$BOOTED_DEVICE" .build/Build/Products/Debug-iphonesimulator/SatsApp.app
+    
+    # Launch the app
+    echo "Launching app..."
     xcrun simctl launch "$BOOTED_DEVICE" app.paywithsats
+    
+    echo "----------------------------------------"
+    echo "Streaming logs from SatsApp (app.paywithsats)"
+    echo "Showing: DEBUG, INFO, WARNING, ERROR levels"
+    echo "Press Ctrl+C to stop"
+    echo "----------------------------------------"
+    
+    # Stream logs and filter for our app
+    # Use a simpler, more reliable approach
+    echo "Waiting for app logs..."
+    sleep 1
+    log stream --level debug 2>&1 | grep --line-buffered -E "(app\.paywithsats|SatsApp\[|🔍)" | head -50
 
 # Open the project in Xcode
 open:
