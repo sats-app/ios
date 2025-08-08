@@ -71,7 +71,7 @@ run:
     # Use a simpler, more reliable approach
     echo "Waiting for app logs..."
     sleep 1
-    log stream --level debug 2>&1 | grep --line-buffered -E "(app\.paywithsats|SatsApp\[|🔍)" | head -50
+    /usr/bin/log stream --level debug 2>&1 | grep --line-buffered -E "(app\.paywithsats|SatsApp\[|🔍)" | head -50
 
 # Open the project in Xcode
 open:
