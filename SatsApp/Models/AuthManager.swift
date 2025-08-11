@@ -93,7 +93,10 @@ class AuthManager: ObservableObject {
         print("- Password: \(generatedPassword)")
         print("- Password length: \(generatedPassword.count)")
         
-        let userAttributes = [AuthUserAttribute(.email, value: email)]
+        let userAttributes = [
+            AuthUserAttribute(.email, value: email),
+            AuthUserAttribute(.preferredUsername, value: username)
+        ]
         
         do {
             print("Calling Amplify signUp...")

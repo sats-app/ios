@@ -75,6 +75,9 @@ just update-deps
 just build
 ```
 
+### Logging
+Use the iOS logging library. Most logs should remain at the DEBUG level, however log important applications events at INFO. Use WARN and ERROR as appropriate.
+
 ## Project Configuration
 
 - **Bundle ID**: app.paywithsats
