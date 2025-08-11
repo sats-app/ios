@@ -3,11 +3,18 @@ import SwiftUI
 @main
 struct SatsAppApp: App {
     @StateObject private var walletManager = WalletManager()
+    @StateObject private var authManager = AuthManager()
     
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environmentObject(walletManager)
+            if authManager.isAuthenticated {
+                ContentView()
+                    .environmentObject(walletManager)
+                    .environmentObject(authManager)
+            } else {
+                AuthView()
+                    .environmentObject(authManager)
+            }
         }
     }
 }

@@ -1,200 +1,245 @@
 #!/usr/bin/env just --justfile
 
+# Configuration
+project := "SatsApp.xcodeproj"
+scheme := "SatsApp"
+bundle_id := "app.paywithsats"
+build_dir := ".build"
+derived_data := "~/Library/Developer/Xcode/DerivedData/SatsApp-*"
+
+# Build settings
+arch := "arm64"
+configuration := "Debug"
+
 # Default recipe to display help information
 default:
     @just --list
 
-# Build the app for simulator
-build:
-    xcodebuild -scheme SatsApp \
-        -destination 'platform=iOS Simulator,OS=latest' \
-        build
-
-# Build the app for device
-build-device:
-    xcodebuild -scheme SatsApp \
-        -destination 'generic/platform=iOS' \
-        build
-
 # Clean build artifacts
 clean:
-    xcodebuild -scheme SatsApp clean
-    rm -rf ~/Library/Developer/Xcode/DerivedData/SatsApp-*
+    xcodebuild -project {{project}} -scheme {{scheme}} clean
+    rm -rf {{derived_data}}
+    rm -rf {{build_dir}}
 
-# Run tests
-test:
-    xcodebuild -scheme SatsApp \
-        -destination 'platform=iOS Simulator,OS=latest' \
-        test
+# Build the app for simulator
+build:
+    #!/bin/bash
+    set -euo pipefail
+    
+    # Get or boot a simulator
+    BOOTED=$(xcrun simctl list devices | grep -E "Booted" | head -n 1 | grep -oE '[A-Z0-9]{8}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{12}' || true)
+    
+    if [ -n "$BOOTED" ]; then
+        SIMULATOR_ID="$BOOTED"
+    else
+        # Get any iPhone simulator
+        SIMULATOR_ID=$(xcrun simctl list devices | grep -E "iPhone.*(17\.[4-5]|18\.)" | head -n 1 | grep -oE '[A-Z0-9]{8}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{12}' || true)
+        
+        if [ -z "$SIMULATOR_ID" ]; then
+            echo "❌ No suitable iPhone simulator found"
+            exit 1
+        fi
+    fi
+    
+    echo "🔨 Building for simulator: $SIMULATOR_ID"
+    xcodebuild -project {{project}} -scheme {{scheme}} \
+        -destination "platform=iOS Simulator,arch={{arch}},id=$SIMULATOR_ID" \
+        -configuration {{configuration}} \
+        -derivedDataPath {{build_dir}} \
+        build
 
-# Run the app in currently open simulator (or boot default if none open)
+# Run the app (build, install, launch, and stream logs)
 run:
     #!/bin/bash
-    # Get the first booted simulator, or boot the default one
-    BOOTED_DEVICE=$(xcrun simctl list devices | grep -E "Booted" | head -n 1 | grep -oE '[A-Z0-9]{8}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{12}')
+    set -euo pipefail
     
-    if [ -z "$BOOTED_DEVICE" ]; then
-        echo "No simulator booted. Starting default simulator..."
+    # Get or boot a simulator
+    BOOTED=$(xcrun simctl list devices | grep -E "Booted" | head -n 1 | grep -oE '[A-Z0-9]{8}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{12}' || true)
+    
+    if [ -n "$BOOTED" ]; then
+        SIMULATOR_ID="$BOOTED"
+        echo "📱 Using booted simulator: $SIMULATOR_ID"
+    else
+        # Get any iPhone simulator
+        IPHONE=$(xcrun simctl list devices | grep -E "iPhone.*(17\.[4-5]|18\.)" | head -n 1 | grep -oE '[A-Z0-9]{8}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{12}' || true)
+        
+        if [ -z "$IPHONE" ]; then
+            echo "❌ No suitable iPhone simulator found"
+            exit 1
+        fi
+        
+        echo "📱 Booting simulator: $IPHONE"
         open -a Simulator
-        # Wait for simulator to boot
-        sleep 3
-        BOOTED_DEVICE=$(xcrun simctl list devices | grep -E "Booted" | head -n 1 | grep -oE '[A-Z0-9]{8}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{12}')
+        xcrun simctl boot "$IPHONE" 2>/dev/null || true
+        
+        # Wait for boot
+        for i in {1..10}; do
+            if xcrun simctl list devices | grep -q "$IPHONE.*Booted"; then
+                break
+            fi
+            sleep 1
+        done
+        
+        SIMULATOR_ID="$IPHONE"
     fi
     
-    if [ -z "$BOOTED_DEVICE" ]; then
-        echo "Failed to detect booted simulator"
+    # Build
+    echo "🔨 Building for simulator..."
+    xcodebuild -project {{project}} -scheme {{scheme}} \
+        -destination "platform=iOS Simulator,arch={{arch}},id=$SIMULATOR_ID" \
+        -configuration {{configuration}} \
+        -derivedDataPath {{build_dir}} \
+        -allowProvisioningUpdates \
+        build > /dev/null
+    
+    if [ $? -ne 0 ]; then
+        echo "❌ Build failed!"
         exit 1
     fi
+    echo "✅ Build succeeded"
     
-    echo "Using simulator: $BOOTED_DEVICE"
+    # Install
+    echo "📦 Installing app..."
+    xcrun simctl install "$SIMULATOR_ID" {{build_dir}}/Build/Products/{{configuration}}-iphonesimulator/{{scheme}}.app
     
-    xcodebuild -scheme SatsApp \
-        -destination "platform=iOS Simulator,id=$BOOTED_DEVICE" \
-        -configuration Debug \
-        -derivedDataPath .build \
-        -allowProvisioningUpdates \
-        build
+    if [ $? -ne 0 ]; then
+        echo "❌ Installation failed!"
+        exit 1
+    fi
+    echo "✅ App installed"
     
-    xcrun simctl install "$BOOTED_DEVICE" .build/Build/Products/Debug-iphonesimulator/SatsApp.app
+    # Launch
+    echo "🚀 Launching app..."
+    xcrun simctl launch "$SIMULATOR_ID" {{bundle_id}}
+    echo "✅ App launched"
     
-    # Launch the app
-    echo "Launching app..."
-    xcrun simctl launch "$BOOTED_DEVICE" app.paywithsats
-    
-    echo "----------------------------------------"
-    echo "Streaming logs from SatsApp (app.paywithsats)"
-    echo "Showing: DEBUG, INFO, WARNING, ERROR levels"
+    # Stream logs
+    echo "📝 Streaming logs for {{bundle_id}}..."
     echo "Press Ctrl+C to stop"
     echo "----------------------------------------"
     
-    # Stream logs and filter for our app
-    # Use a simpler, more reliable approach
-    echo "Waiting for app logs..."
-    sleep 1
-    /usr/bin/log stream --level debug 2>&1 | grep --line-buffered -E "(app\.paywithsats|SatsApp\[|🔍)" | head -50
-
-# Open the project in Xcode
-open:
-    open SatsApp.xcodeproj
-
-# Format Swift code
-format:
-    swift-format -i -r SatsApp/
-
-# Lint Swift code
-lint:
-    swiftlint --strict
-
-# Show available simulators
-simulators:
-    xcrun simctl list devices
-
-# Archive for release
-archive:
-    xcodebuild -scheme SatsApp \
-        -archivePath ./build/SatsApp.xcarchive \
-        -destination 'generic/platform=iOS' \
-        archive
-
-# Export IPA from archive
-export-ipa: archive
-    xcodebuild -exportArchive \
-        -archivePath ./build/SatsApp.xcarchive \
-        -exportPath ./build \
-        -exportOptionsPlist ExportOptions.plist
-
-# Install dependencies
-deps:
-    xcodebuild -resolvePackageDependencies
-
-# Update all dependencies to latest versions
-update-deps:
-    #!/bin/bash
-    echo "Updating Swift package dependencies..."
-    
-    # Remove the Package.resolved file to force fetching latest versions
-    rm -f SatsApp.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
-    
-    # Clear the SPM cache to ensure we get the latest version
-    rm -rf ~/Library/Caches/org.swift.swiftpm
-    rm -rf ~/Library/Developer/Xcode/DerivedData/SatsApp-*
-    
-    # Resolve dependencies fresh - this will fetch the latest commit from the branch
-    xcodebuild -resolvePackageDependencies -project SatsApp.xcodeproj
-    
-    echo ""
-    echo "Dependencies updated successfully!"
-    echo ""
-    echo "Updated packages:"
-    just show-deps
-
-# Show current dependency versions
-show-deps:
-    #!/bin/bash
-    echo "Current Swift package dependencies:"
-    if [ -f "SatsApp.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved" ]; then
-        cat SatsApp.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved | grep -E "(identity|revision)" | sed 's/^[[:space:]]*//'
-    else
-        echo "No Package.resolved file found. Run 'just deps' first."
-    fi
+    /usr/bin/log stream --level info --predicate 'process == "{{scheme}}" OR subsystem == "{{bundle_id}}"' --style compact
 
 # Run on specific simulator by name
-run-on device:
+run-on device: 
     #!/bin/bash
-    # Try to find the device by name and get its ID
-    DEVICE_ID=$(xcrun simctl list devices | grep "{{device}}" | head -n 1 | grep -oE '[A-Z0-9]{8}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{12}')
+    set -euo pipefail
+    SIMULATOR_ID=$(xcrun simctl list devices | grep "{{device}}" | head -n 1 | grep -oE '[A-Z0-9]{8}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{12}' || true)
     
-    if [ -z "$DEVICE_ID" ]; then
-        echo "Device '{{device}}' not found"
+    if [ -z "$SIMULATOR_ID" ]; then
+        echo "❌ Device '{{device}}' not found"
         exit 1
     fi
     
-    # Boot the device if not already booted
-    xcrun simctl boot "$DEVICE_ID" 2>/dev/null || true
+    # Boot device if needed
+    xcrun simctl boot "$SIMULATOR_ID" 2>/dev/null || true
     open -a Simulator
+    echo "📱 Using simulator: $SIMULATOR_ID"
     
-    xcodebuild -scheme SatsApp \
-        -destination "platform=iOS Simulator,id=$DEVICE_ID" \
-        -configuration Debug \
-        -derivedDataPath .build \
-        build
+    # Build
+    echo "🔨 Building..."
+    xcodebuild -project {{project}} -scheme {{scheme}} \
+        -destination "platform=iOS Simulator,arch={{arch}},id=$SIMULATOR_ID" \
+        -configuration {{configuration}} \
+        -derivedDataPath {{build_dir}} \
+        build > /dev/null || { echo "❌ Build failed!"; exit 1; }
     
-    xcrun simctl install "$DEVICE_ID" .build/Build/Products/Debug-iphonesimulator/SatsApp.app
-    xcrun simctl launch "$DEVICE_ID" app.paywithsats
+    # Install and launch
+    echo "📦 Installing and launching..."
+    xcrun simctl install "$SIMULATOR_ID" {{build_dir}}/Build/Products/{{configuration}}-iphonesimulator/{{scheme}}.app || { echo "❌ Install failed!"; exit 1; }
+    xcrun simctl launch "$SIMULATOR_ID" {{bundle_id}}
+    echo "✅ App launched on {{device}}"
 
-# Check Swift package dependencies
-check-deps:
-    swift package show-dependencies
+# Quick rebuild and run (skips some checks for faster iteration)
+quick:
+    #!/bin/bash
+    set -euo pipefail
+    echo "🚀 Quick build and run..."
+    
+    # Get booted simulator
+    SIMULATOR_ID=$(xcrun simctl list devices | grep -E "Booted" | head -n 1 | grep -oE '[A-Z0-9]{8}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{12}' || true)
+    
+    if [ -z "$SIMULATOR_ID" ]; then
+        echo "❌ No booted simulator found. Run 'just run' first."
+        exit 1
+    fi
+    
+    echo "📱 Using simulator: $SIMULATOR_ID"
+    
+    # Quick build with minimal output
+    xcodebuild -project {{project}} -scheme {{scheme}} \
+        -destination "platform=iOS Simulator,arch={{arch}},id=$SIMULATOR_ID" \
+        -configuration {{configuration}} \
+        -derivedDataPath {{build_dir}} \
+        build | grep -E "^(=== BUILD|\\*\\* BUILD|\\.\\.\\.)" || true
+    
+    # Install and launch
+    xcrun simctl install "$SIMULATOR_ID" {{build_dir}}/Build/Products/{{configuration}}-iphonesimulator/{{scheme}}.app
+    xcrun simctl launch "$SIMULATOR_ID" {{bundle_id}}
+    echo "✅ Quick launch complete"
 
-# Generate Xcode project from Package.swift (if using SPM)
-generate:
-    swift package generate-xcodeproj
-
-# Run UI tests
-ui-test:
-    xcodebuild -scheme SatsApp \
-        -destination 'platform=iOS Simulator,OS=latest' \
-        -only-testing:SatsAppUITests \
+# Run tests
+test:
+    #!/bin/bash
+    set -euo pipefail
+    
+    # Get or boot a simulator
+    SIMULATOR_ID=$(xcrun simctl list devices | grep -E "Booted" | head -n 1 | grep -oE '[A-Z0-9]{8}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{12}' || \
+        xcrun simctl list devices | grep -E "iPhone.*(17\.[4-5]|18\.)" | head -n 1 | grep -oE '[A-Z0-9]{8}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{12}')
+        
+    if [ -z "$SIMULATOR_ID" ]; then
+        echo "❌ No suitable simulator found"
+        exit 1
+    fi
+    
+    echo "🧪 Running tests on simulator: $SIMULATOR_ID"
+    xcodebuild -project {{project}} -scheme {{scheme}} \
+        -destination "platform=iOS Simulator,arch={{arch}},id=$SIMULATOR_ID" \
         test
 
-# Run unit tests only
-unit-test:
-    xcodebuild -scheme SatsApp \
-        -destination 'platform=iOS Simulator,OS=latest' \
-        -only-testing:SatsAppTests \
-        test
+# Open the project in Xcode
+open:
+    open {{project}}
 
-# Build for all platforms (iOS and iPadOS)
-build-all:
-    xcodebuild -scheme SatsApp -destination 'platform=iOS Simulator,OS=latest,name=iPhone 15 Pro' build
-    xcodebuild -scheme SatsApp -destination 'platform=iOS Simulator,OS=latest,name=iPad Pro 11-inch (M4)' build
+# Show available simulators
+simulators:
+    xcrun simctl list devices available
 
 # Show build settings
 settings:
-    xcodebuild -scheme SatsApp -showBuildSettings
+    xcodebuild -project {{project}} -scheme {{scheme}} -showBuildSettings
 
-# Analyze code for potential issues
-analyze:
-    xcodebuild -scheme SatsApp \
-        -destination 'platform=iOS Simulator,OS=latest' \
-        analyze
+# Install dependencies
+deps:
+    xcodebuild -resolvePackageDependencies -project {{project}}
+
+# Update dependencies
+update-deps:
+    rm -f {{project}}/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
+    rm -rf ~/Library/Caches/org.swift.swiftpm
+    rm -rf {{derived_data}}
+    xcodebuild -resolvePackageDependencies -project {{project}}
+    @echo "✅ Dependencies updated"
+
+# Show current dependencies
+show-deps:
+    @if [ -f "{{project}}/project.xcworkspace/xcshareddata/swiftpm/Package.resolved" ]; then \
+        cat {{project}}/project.xcworkspace/xcshareddata/swiftpm/Package.resolved | \
+        grep -E "(identity|revision)" | sed 's/^[[:space:]]*//' | sed 's/[",]//g'; \
+    else \
+        echo "No Package.resolved file found. Run 'just deps' first."; \
+    fi
+
+# Archive for release
+archive:
+    xcodebuild -project {{project}} -scheme {{scheme}} \
+        -archivePath ./build/{{scheme}}.xcarchive \
+        -destination 'generic/platform=iOS' \
+        archive
+
+# Reset everything (clean + remove derived data + reset simulators)
+reset: clean
+    xcrun simctl shutdown all
+    xcrun simctl erase all
+    @echo "✅ Reset complete"
+

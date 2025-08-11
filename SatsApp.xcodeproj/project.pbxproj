@@ -9,6 +9,8 @@
 /* Begin PBXBuildFile section */
 		63B79E682E428E8900BA52CA /* CashuDevKit in Frameworks */ = {isa = PBXBuildFile; productRef = 63B79E672E428E8900BA52CA /* CashuDevKit */; };
 		63F68CFB2E3D7428004176D7 /* CashuDevKit in Frameworks */ = {isa = PBXBuildFile; productRef = 63F68CFA2E3D7428004176D7 /* CashuDevKit */; };
+		A12345678901ABCE /* Amplify in Frameworks */ = {isa = PBXBuildFile; productRef = A12345678901ABCD /* Amplify */; };
+		A12345678901ABCG /* AWSCognitoAuthPlugin in Frameworks */ = {isa = PBXBuildFile; productRef = A12345678901ABCH /* AWSCognitoAuthPlugin */; };
 		B12345678901ABCD /* SatsAppApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABCC /* SatsAppApp.swift */; };
 		B12345678901ABCF /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABCE /* ContentView.swift */; };
 		B12345678901ABD1 /* TransactView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABD0 /* TransactView.swift */; };
@@ -20,6 +22,11 @@
 		B12345678901ABE5 /* DepositSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABE4 /* DepositSheetView.swift */; };
 		B12345678901ABE7 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABE6 /* Theme.swift */; };
 		B12345678901ABE9 /* WalletLoadingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABE8 /* WalletLoadingView.swift */; };
+		B12345678901ABEC /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABEA /* AuthManager.swift */; };
+		B12345678901ABEF /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABF0 /* AuthView.swift */; };
+		B12345678901ABF1 /* SignUpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABF2 /* SignUpView.swift */; };
+		B12345678901ABF3 /* ConfirmEmailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABF4 /* ConfirmEmailView.swift */; };
+		B12345678901ABF6 /* amplifyconfiguration.json in Resources */ = {isa = PBXBuildFile; fileRef = B12345678901ABF5 /* amplifyconfiguration.json */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -35,6 +42,11 @@
 		B12345678901ABE4 /* DepositSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DepositSheetView.swift; sourceTree = "<group>"; };
 		B12345678901ABE6 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		B12345678901ABE8 /* WalletLoadingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalletLoadingView.swift; sourceTree = "<group>"; };
+		B12345678901ABEA /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
+		B12345678901ABF0 /* AuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthView.swift; sourceTree = "<group>"; };
+		B12345678901ABF2 /* SignUpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpView.swift; sourceTree = "<group>"; };
+		B12345678901ABF4 /* ConfirmEmailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfirmEmailView.swift; sourceTree = "<group>"; };
+		B12345678901ABF5 /* amplifyconfiguration.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = amplifyconfiguration.json; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -44,6 +56,8 @@
 			files = (
 				63B79E682E428E8900BA52CA /* CashuDevKit in Frameworks */,
 				63F68CFB2E3D7428004176D7 /* CashuDevKit in Frameworks */,
+				A12345678901ABCE /* Amplify in Frameworks */,
+				A12345678901ABCG /* AWSCognitoAuthPlugin in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -78,6 +92,11 @@
 				B12345678901ABE4 /* DepositSheetView.swift */,
 				B12345678901ABE6 /* Theme.swift */,
 				B12345678901ABE8 /* WalletLoadingView.swift */,
+				B12345678901ABEA /* AuthManager.swift */,
+				B12345678901ABF0 /* AuthView.swift */,
+				B12345678901ABF2 /* SignUpView.swift */,
+				B12345678901ABF4 /* ConfirmEmailView.swift */,
+				B12345678901ABF5 /* amplifyconfiguration.json */,
 				B12345678901ABD4 /* Assets.xcassets */,
 				B12345678901ABD8 /* Preview Content */,
 			);
@@ -138,6 +157,7 @@
 			mainGroup = B12345678901ABC0;
 			packageReferences = (
 				63B79E662E428E8900BA52CA /* XCRemoteSwiftPackageReference "cdk-swift" */,
+				A12345678901ABCF /* XCRemoteSwiftPackageReference "amplify-swift" */,
 			);
 			productRefGroup = B12345678901ABCA /* Products */;
 			projectDirPath = "";
@@ -155,6 +175,7 @@
 			files = (
 				B12345678901ABD7 /* Preview Assets.xcassets in Resources */,
 				B12345678901ABD5 /* Assets.xcassets in Resources */,
+				B12345678901ABF6 /* amplifyconfiguration.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -171,6 +192,10 @@
 				B12345678901ABE1 /* BalanceView.swift in Sources */,
 				B12345678901ABE3 /* WalletManager.swift in Sources */,
 				B12345678901ABE5 /* DepositSheetView.swift in Sources */,
+				B12345678901ABEC /* AuthManager.swift in Sources */,
+				B12345678901ABEF /* AuthView.swift in Sources */,
+				B12345678901ABF1 /* SignUpView.swift in Sources */,
+				B12345678901ABF3 /* ConfirmEmailView.swift in Sources */,
 				B12345678901ABE7 /* Theme.swift in Sources */,
 				B12345678901ABE9 /* WalletLoadingView.swift in Sources */,
 				B12345678901ABCD /* SatsAppApp.swift in Sources */,
@@ -309,7 +334,8 @@
 				DEVELOPMENT_ASSET_PATHS = "\"SatsApp/Preview Content\"";
 				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = SatsApp/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -338,7 +364,8 @@
 				DEVELOPMENT_ASSET_PATHS = "\"SatsApp/Preview Content\"";
 				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = SatsApp/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -397,6 +424,14 @@
 				kind = branch;
 			};
 		};
+		A12345678901ABCF /* XCRemoteSwiftPackageReference "amplify-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/aws-amplify/amplify-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -409,6 +444,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 63F68CF92E3D7428004176D7 /* XCRemoteSwiftPackageReference "cdk-swift" */;
 			productName = CashuDevKit;
+		};
+		A12345678901ABCD /* Amplify */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A12345678901ABCF /* XCRemoteSwiftPackageReference "amplify-swift" */;
+			productName = Amplify;
+		};
+		A12345678901ABCH /* AWSCognitoAuthPlugin */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A12345678901ABCF /* XCRemoteSwiftPackageReference "amplify-swift" */;
+			productName = AWSCognitoAuthPlugin;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
