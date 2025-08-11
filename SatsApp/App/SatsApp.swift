@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct SatsAppApp: App {
+struct SatsApp: App {
     @StateObject private var walletManager = WalletManager()
     @StateObject private var authManager = AuthManager()
     
