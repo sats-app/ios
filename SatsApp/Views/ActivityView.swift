@@ -66,9 +66,8 @@ struct ActivityView: View {
             isLoading = true
         }
         
-        async let transactionsResult = walletManager.listTransactions()
-        let loadedTransactions = await transactionsResult
-        await walletManager.refreshBalance()
+        let loadedTransactions = await walletManager.listTransactions()
+        walletManager.refreshBalance()
         
         await MainActor.run {
             self.transactions = loadedTransactions

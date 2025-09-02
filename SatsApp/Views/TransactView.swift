@@ -90,8 +90,8 @@ struct TransactView: View {
                 TransactSheetView(amount: amount, mode: transactMode)
             }
         }
-        .task {
-            await walletManager.refreshBalance()
+        .onAppear {
+            walletManager.refreshBalance()
         }
     }
     

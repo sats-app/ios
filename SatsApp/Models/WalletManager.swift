@@ -57,13 +57,13 @@ class WalletManager: ObservableObject {
     }
     
     init() {
-        AppLogger.wallet.debug("WalletManager: Initializing...")
+        AppLogger.wallet.info("WalletManager: Initializing...")
         setupWalletDirectory()
-        AppLogger.wallet.debug("WalletManager: Starting wallet initialization task...")
-        Task {
+        AppLogger.wallet.info("WalletManager: Starting wallet initialization task...")
+        Task { @MainActor in
             await initializeWallet()
         }
-        AppLogger.wallet.debug("WalletManager: Init complete, task started")
+        AppLogger.wallet.info("WalletManager: Init complete, task started")
     }
     
     private func setupWalletDirectory() {
@@ -82,36 +82,26 @@ class WalletManager: ObservableObject {
         }
     }
     
+    @MainActor
     private func initializeWallet() async {
         AppLogger.wallet.info("Starting wallet initialization...")
         
-        await MainActor.run {
-            self.isLoading = true
-            self.initializationError = nil
-        }
+        self.isLoading = true
+        self.initializationError = nil
         
-        // Add timeout wrapper
         do {
-            try await withTimeout(30.0) {
-                try await self.performWalletInitialization()
-            }
+            try await performWalletInitialization()
         } catch {
             AppLogger.wallet.error("Wallet initialization failed: \(error.localizedDescription)")
-            await MainActor.run {
-                if error is TimeoutError {
-                    self.initializationError = "Wallet initialization timed out. Please check your internet connection and try again."
-                } else {
-                    self.initializationError = "Failed to initialize wallet: \(error.localizedDescription)"
-                }
-                self.isLoading = false
-            }
+            self.initializationError = "Failed to initialize wallet: \(error.localizedDescription)"
+            self.isLoading = false
         }
     }
     
     private func performWalletInitialization() async throws {
-        AppLogger.wallet.debug("Retrieving mnemonic...")
+        AppLogger.wallet.info("Retrieving mnemonic...")
         let mnemonic = getMnemonicFromKeychain() ?? generateAndStoreMnemonic()
-        AppLogger.wallet.debug("Mnemonic retrieved/generated: \(!mnemonic.isEmpty)")
+        AppLogger.wallet.info("Mnemonic retrieved/generated: \(!mnemonic.isEmpty)")
         
         // Check if mnemonic is valid
         guard !mnemonic.isEmpty else {
@@ -119,14 +109,15 @@ class WalletManager: ObservableObject {
             throw WalletError.failedToGenerateMnemonic
         }
         
-        AppLogger.wallet.debug("Creating wallet config")
+        AppLogger.wallet.info("Creating wallet config")
         let walletConfig = WalletConfig(targetProofCount: nil)
         
-        AppLogger.wallet.debug("Creating wallet database with workDir: \(self.walletDataURL.path)")
-        let database = try await WalletSqliteDatabase(workDir: self.walletDataURL.path)
+        let walletDatabasePath = walletDataURL.appendingPathComponent("wallet.sqlite").path
+        AppLogger.wallet.info("Creating wallet database with path: \(walletDatabasePath)")
+        let database = try await WalletSqliteDatabase(filePath: walletDatabasePath)
         
         AppLogger.wallet.info("Initializing wallet with mint: \(self.defaultMintURL)")
-        let newWallet = try Wallet(
+        let newWallet = try await Wallet(
             mintUrl: defaultMintURL,
             unit: CurrencyUnit.sat,
             mnemonic: mnemonic,
@@ -134,42 +125,21 @@ class WalletManager: ObservableObject {
             config: walletConfig
         )
         
-        AppLogger.wallet.debug("Wallet created successfully, updating UI...")
+        AppLogger.wallet.info("Wallet created successfully, updating UI...")
         await MainActor.run {
             self.wallet = newWallet
             self.isInitialized = true
             self.isLoading = false
             AppLogger.wallet.info("✅ Wallet initialized successfully with mint: \(self.defaultMintURL)")
-        }
-        
-        // Load initial balance
-        await refreshBalance()
-    }
-    
-    // Add timeout functionality
-    private func withTimeout<T>(_ timeout: TimeInterval, operation: @escaping () async throws -> T) async throws -> T {
-        return try await withThrowingTaskGroup(of: T.self) { group in
-            group.addTask {
-                try await operation()
-            }
             
-            group.addTask {
-                try await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
-                throw TimeoutError()
-            }
-            
-            guard let result = try await group.next() else {
-                throw TimeoutError()
-            }
-            
-            group.cancelAll()
-            return result
+            // Load initial balance
+            self.refreshBalance()
         }
     }
     
     // Public method to retry initialization if it fails
     func retryInitialization() {
-        Task {
+        Task { @MainActor in
             await initializeWallet()
         }
     }
@@ -337,11 +307,14 @@ class WalletManager: ObservableObject {
         }
     }
     
-    @MainActor
-    func refreshBalance() async {
-        let newBalance = await getBalance()
-        self.balance = newBalance
-        AppLogger.wallet.debug("Balance updated to: \(newBalance) sats")
+    func refreshBalance() {
+        Task {
+            let newBalance = await getBalance()
+            await MainActor.run {
+                self.balance = newBalance
+                AppLogger.wallet.debug("Balance updated to: \(newBalance) sats")
+            }
+        }
     }
     
     // MARK: - Mint Quote
@@ -359,14 +332,14 @@ class WalletManager: ObservableObject {
         do {
             let amountObj = Amount(value: amount)
             let mintQuote = try await wallet.mintQuote(amount: amountObj, description: nil)
-            let state = mintQuote.state()
+            let state = mintQuote.state
             let statusString = switch state {
             case .unpaid: "Unpaid"
             case .paid: "Paid"
             case .pending: "Pending"
             case .issued: "Issued"
             }
-            return (mintQuote.request(), statusString, mintQuote.id())
+            return (mintQuote.request, statusString, mintQuote.id)
         } catch {
             AppLogger.mint.error("Failed to generate mint quote: \(error.localizedDescription)")
             throw error
@@ -410,12 +383,6 @@ class WalletManager: ObservableObject {
             AppLogger.mint.error("Failed to mint tokens: \(error.localizedDescription)")
             throw error
         }
-    }
-}
-
-struct TimeoutError: Error, LocalizedError {
-    var errorDescription: String? {
-        return "Operation timed out"
     }
 }
 

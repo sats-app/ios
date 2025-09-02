@@ -352,7 +352,7 @@ struct DepositSheetView: View {
                 }
                 
                 // Refresh the balance in WalletManager
-                await walletManager.refreshBalance()
+                walletManager.refreshBalance()
             } catch {
                 await MainActor.run {
                     self.isMinting = false

@@ -118,7 +118,7 @@ run:
     echo "Press Ctrl+C to stop"
     echo "----------------------------------------"
     
-    /usr/bin/log stream --level info --predicate 'process == "{{scheme}}" OR subsystem == "{{bundle_id}}"' --style compact
+    /usr/bin/log stream --level debug --predicate 'subsystem == "{{bundle_id}}"' --style compact
 
 # Run on specific simulator by name
 run-on device: 

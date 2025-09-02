@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		634CCEA92E61164B0028986D /* CashuDevKit in Frameworks */ = {isa = PBXBuildFile; productRef = 634CCEA82E61164B0028986D /* CashuDevKit */; };
 		63B79E682E428E8900BA52CA /* CashuDevKit in Frameworks */ = {isa = PBXBuildFile; productRef = 63B79E672E428E8900BA52CA /* CashuDevKit */; };
 		63F68CFB2E3D7428004176D7 /* CashuDevKit in Frameworks */ = {isa = PBXBuildFile; productRef = 63F68CFA2E3D7428004176D7 /* CashuDevKit */; };
 		A12345678901ABCE /* Amplify in Frameworks */ = {isa = PBXBuildFile; productRef = A12345678901ABCD /* Amplify */; };
@@ -54,6 +55,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				634CCEA92E61164B0028986D /* CashuDevKit in Frameworks */,
 				63B79E682E428E8900BA52CA /* CashuDevKit in Frameworks */,
 				63F68CFB2E3D7428004176D7 /* CashuDevKit in Frameworks */,
 				A12345678901ABCE /* Amplify in Frameworks */,
@@ -91,6 +93,14 @@
 				B12345678901ABD8 /* Preview Content */,
 			);
 			path = SatsApp;
+			sourceTree = "<group>";
+		};
+		B12345678901ABD8 /* Preview Content */ = {
+			isa = PBXGroup;
+			children = (
+				B12345678901ABD6 /* Preview Assets.xcassets */,
+			);
+			path = "Preview Content";
 			sourceTree = "<group>";
 		};
 		C12345678901ABC1 /* App */ = {
@@ -141,14 +151,6 @@
 				B12345678901ABD4 /* Assets.xcassets */,
 			);
 			path = Resources;
-			sourceTree = "<group>";
-		};
-		B12345678901ABD8 /* Preview Content */ = {
-			isa = PBXGroup;
-			children = (
-				B12345678901ABD6 /* Preview Assets.xcassets */,
-			);
-			path = "Preview Content";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -450,7 +452,7 @@
 /* Begin XCRemoteSwiftPackageReference section */
 		63B79E662E428E8900BA52CA /* XCRemoteSwiftPackageReference "cdk-swift" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/davidcaseria/cdk-swift";
+			repositoryURL = "https://github.com/cashubtc/cdk-swift";
 			requirement = {
 				branch = main;
 				kind = branch;
@@ -458,7 +460,7 @@
 		};
 		63F68CF92E3D7428004176D7 /* XCRemoteSwiftPackageReference "cdk-swift" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/davidcaseria/cdk-swift";
+			repositoryURL = "https://github.com/cashubtc/cdk-swift";
 			requirement = {
 				branch = main;
 				kind = branch;
@@ -475,6 +477,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		634CCEA82E61164B0028986D /* CashuDevKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 63B79E662E428E8900BA52CA /* XCRemoteSwiftPackageReference "cdk-swift" */;
+			productName = CashuDevKit;
+		};
 		63B79E672E428E8900BA52CA /* CashuDevKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 63B79E662E428E8900BA52CA /* XCRemoteSwiftPackageReference "cdk-swift" */;
