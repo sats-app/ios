@@ -7,9 +7,23 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		634CCEA92E61164B0028986D /* CashuDevKit in Frameworks */ = {isa = PBXBuildFile; productRef = 634CCEA82E61164B0028986D /* CashuDevKit */; };
-		63B79E682E428E8900BA52CA /* CashuDevKit in Frameworks */ = {isa = PBXBuildFile; productRef = 63B79E672E428E8900BA52CA /* CashuDevKit */; };
-		63F68CFB2E3D7428004176D7 /* CashuDevKit in Frameworks */ = {isa = PBXBuildFile; productRef = 63F68CFA2E3D7428004176D7 /* CashuDevKit */; };
+		6312270B2E844DA500165F7C /* amplify_outputs.json in Resources */ = {isa = PBXBuildFile; fileRef = 6312270A2E844DA500165F7C /* amplify_outputs.json */; };
+		6339661E2E859DF1001FC57B /* CashuDevKit in Frameworks */ = {isa = PBXBuildFile; productRef = 6339661D2E859DF1001FC57B /* CashuDevKit */; };
+		634D2E152E8C7EC500217DB3 /* CashuDevKit in Frameworks */ = {isa = PBXBuildFile; productRef = 634D2E142E8C7EC500217DB3 /* CashuDevKit */; };
+		634D2E252E8C875800217DB3 /* MeltQuoteState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 634D2E192E8C875800217DB3 /* MeltQuoteState.swift */; };
+		634D2E262E8C875800217DB3 /* WalletMetadata.swift in Sources */ = {isa = PBXBuildFile; fileRef = 634D2E222E8C875800217DB3 /* WalletMetadata.swift */; };
+		634D2E272E8C875800217DB3 /* Transaction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 634D2E202E8C875800217DB3 /* Transaction.swift */; };
+		634D2E282E8C875800217DB3 /* MeltQuote.swift in Sources */ = {isa = PBXBuildFile; fileRef = 634D2E172E8C875800217DB3 /* MeltQuote.swift */; };
+		634D2E292E8C875800217DB3 /* WalletMetadata+Schema.swift in Sources */ = {isa = PBXBuildFile; fileRef = 634D2E232E8C875800217DB3 /* WalletMetadata+Schema.swift */; };
+		634D2E2A2E8C875800217DB3 /* Transaction+Schema.swift in Sources */ = {isa = PBXBuildFile; fileRef = 634D2E212E8C875800217DB3 /* Transaction+Schema.swift */; };
+		634D2E2B2E8C875800217DB3 /* AmplifyModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 634D2E162E8C875800217DB3 /* AmplifyModels.swift */; };
+		634D2E2C2E8C875800217DB3 /* MintQuote+Schema.swift in Sources */ = {isa = PBXBuildFile; fileRef = 634D2E1B2E8C875800217DB3 /* MintQuote+Schema.swift */; };
+		634D2E2D2E8C875800217DB3 /* MeltQuote+Schema.swift in Sources */ = {isa = PBXBuildFile; fileRef = 634D2E182E8C875800217DB3 /* MeltQuote+Schema.swift */; };
+		634D2E2E2E8C875800217DB3 /* MintQuoteState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 634D2E1C2E8C875800217DB3 /* MintQuoteState.swift */; };
+		634D2E2F2E8C875800217DB3 /* ProofState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 634D2E1F2E8C875800217DB3 /* ProofState.swift */; };
+		634D2E302E8C875800217DB3 /* Proof+Schema.swift in Sources */ = {isa = PBXBuildFile; fileRef = 634D2E1E2E8C875800217DB3 /* Proof+Schema.swift */; };
+		634D2E312E8C875800217DB3 /* Proof.swift in Sources */ = {isa = PBXBuildFile; fileRef = 634D2E1D2E8C875800217DB3 /* Proof.swift */; };
+		634D2E322E8C875800217DB3 /* MintQuote.swift in Sources */ = {isa = PBXBuildFile; fileRef = 634D2E1A2E8C875800217DB3 /* MintQuote.swift */; };
 		A12345678901ABCE /* Amplify in Frameworks */ = {isa = PBXBuildFile; productRef = A12345678901ABCD /* Amplify */; };
 		A12345678901ABCG /* AWSCognitoAuthPlugin in Frameworks */ = {isa = PBXBuildFile; productRef = A12345678901ABCH /* AWSCognitoAuthPlugin */; };
 		B12345678901ABCD /* SatsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABCC /* SatsApp.swift */; };
@@ -27,10 +41,29 @@
 		B12345678901ABEF /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABF0 /* AuthView.swift */; };
 		B12345678901ABF1 /* SignUpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABF2 /* SignUpView.swift */; };
 		B12345678901ABF3 /* ConfirmEmailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABF4 /* ConfirmEmailView.swift */; };
-		B12345678901ABF6 /* amplifyconfiguration.json in Resources */ = {isa = PBXBuildFile; fileRef = B12345678901ABF5 /* amplifyconfiguration.json */; };
+		B12345678901ABF5 /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABF6 /* SignInView.swift */; };
+		B12345678901ABFB /* AmplifyWalletDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABF7 /* AmplifyWalletDatabase.swift */; };
+		B12345678901ABFC /* LocalWalletCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABF8 /* LocalWalletCache.swift */; };
+		B12345678901ABFD /* UITransaction.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABF9 /* UITransaction.swift */; };
+		B12345678901ABFE /* WalletEncryption.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABFA /* WalletEncryption.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		6312270A2E844DA500165F7C /* amplify_outputs.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = amplify_outputs.json; sourceTree = "<group>"; };
+		634D2E162E8C875800217DB3 /* AmplifyModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AmplifyModels.swift; sourceTree = "<group>"; };
+		634D2E172E8C875800217DB3 /* MeltQuote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeltQuote.swift; sourceTree = "<group>"; };
+		634D2E182E8C875800217DB3 /* MeltQuote+Schema.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MeltQuote+Schema.swift"; sourceTree = "<group>"; };
+		634D2E192E8C875800217DB3 /* MeltQuoteState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeltQuoteState.swift; sourceTree = "<group>"; };
+		634D2E1A2E8C875800217DB3 /* MintQuote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MintQuote.swift; sourceTree = "<group>"; };
+		634D2E1B2E8C875800217DB3 /* MintQuote+Schema.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MintQuote+Schema.swift"; sourceTree = "<group>"; };
+		634D2E1C2E8C875800217DB3 /* MintQuoteState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MintQuoteState.swift; sourceTree = "<group>"; };
+		634D2E1D2E8C875800217DB3 /* Proof.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Proof.swift; sourceTree = "<group>"; };
+		634D2E1E2E8C875800217DB3 /* Proof+Schema.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Proof+Schema.swift"; sourceTree = "<group>"; };
+		634D2E1F2E8C875800217DB3 /* ProofState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProofState.swift; sourceTree = "<group>"; };
+		634D2E202E8C875800217DB3 /* Transaction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Transaction.swift; sourceTree = "<group>"; };
+		634D2E212E8C875800217DB3 /* Transaction+Schema.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Transaction+Schema.swift"; sourceTree = "<group>"; };
+		634D2E222E8C875800217DB3 /* WalletMetadata.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalletMetadata.swift; sourceTree = "<group>"; };
+		634D2E232E8C875800217DB3 /* WalletMetadata+Schema.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WalletMetadata+Schema.swift"; sourceTree = "<group>"; };
 		B12345678901ABC9 /* SatsApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SatsApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B12345678901ABCC /* SatsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SatsApp.swift; sourceTree = "<group>"; };
 		B12345678901ABCE /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -47,7 +80,11 @@
 		B12345678901ABF0 /* AuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthView.swift; sourceTree = "<group>"; };
 		B12345678901ABF2 /* SignUpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpView.swift; sourceTree = "<group>"; };
 		B12345678901ABF4 /* ConfirmEmailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfirmEmailView.swift; sourceTree = "<group>"; };
-		B12345678901ABF5 /* amplifyconfiguration.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = amplifyconfiguration.json; sourceTree = "<group>"; };
+		B12345678901ABF6 /* SignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInView.swift; sourceTree = "<group>"; };
+		B12345678901ABF7 /* AmplifyWalletDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AmplifyWalletDatabase.swift; sourceTree = "<group>"; };
+		B12345678901ABF8 /* LocalWalletCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalWalletCache.swift; sourceTree = "<group>"; };
+		B12345678901ABF9 /* UITransaction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UITransaction.swift; sourceTree = "<group>"; };
+		B12345678901ABFA /* WalletEncryption.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalletEncryption.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -55,10 +92,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				634CCEA92E61164B0028986D /* CashuDevKit in Frameworks */,
-				63B79E682E428E8900BA52CA /* CashuDevKit in Frameworks */,
-				63F68CFB2E3D7428004176D7 /* CashuDevKit in Frameworks */,
+				6339661E2E859DF1001FC57B /* CashuDevKit in Frameworks */,
 				A12345678901ABCE /* Amplify in Frameworks */,
+				634D2E152E8C7EC500217DB3 /* CashuDevKit in Frameworks */,
 				A12345678901ABCG /* AWSCognitoAuthPlugin in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -66,9 +102,31 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		634D2E242E8C875800217DB3 /* AmplifyModels */ = {
+			isa = PBXGroup;
+			children = (
+				634D2E162E8C875800217DB3 /* AmplifyModels.swift */,
+				634D2E172E8C875800217DB3 /* MeltQuote.swift */,
+				634D2E182E8C875800217DB3 /* MeltQuote+Schema.swift */,
+				634D2E192E8C875800217DB3 /* MeltQuoteState.swift */,
+				634D2E1A2E8C875800217DB3 /* MintQuote.swift */,
+				634D2E1B2E8C875800217DB3 /* MintQuote+Schema.swift */,
+				634D2E1C2E8C875800217DB3 /* MintQuoteState.swift */,
+				634D2E1D2E8C875800217DB3 /* Proof.swift */,
+				634D2E1E2E8C875800217DB3 /* Proof+Schema.swift */,
+				634D2E1F2E8C875800217DB3 /* ProofState.swift */,
+				634D2E202E8C875800217DB3 /* Transaction.swift */,
+				634D2E212E8C875800217DB3 /* Transaction+Schema.swift */,
+				634D2E222E8C875800217DB3 /* WalletMetadata.swift */,
+				634D2E232E8C875800217DB3 /* WalletMetadata+Schema.swift */,
+			);
+			path = AmplifyModels;
+			sourceTree = "<group>";
+		};
 		B12345678901ABC0 = {
 			isa = PBXGroup;
 			children = (
+				634D2E242E8C875800217DB3 /* AmplifyModels */,
 				B12345678901ABCB /* SatsApp */,
 				B12345678901ABCA /* Products */,
 			);
@@ -116,6 +174,10 @@
 			children = (
 				B12345678901ABE2 /* WalletManager.swift */,
 				B12345678901ABEA /* AuthManager.swift */,
+				B12345678901ABF7 /* AmplifyWalletDatabase.swift */,
+				B12345678901ABF8 /* LocalWalletCache.swift */,
+				B12345678901ABF9 /* UITransaction.swift */,
+				B12345678901ABFA /* WalletEncryption.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -131,6 +193,7 @@
 				B12345678901ABE8 /* WalletLoadingView.swift */,
 				B12345678901ABF0 /* AuthView.swift */,
 				B12345678901ABF2 /* SignUpView.swift */,
+				B12345678901ABF6 /* SignInView.swift */,
 				B12345678901ABF4 /* ConfirmEmailView.swift */,
 			);
 			path = Views;
@@ -147,8 +210,8 @@
 		C12345678901ABC5 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
-				B12345678901ABF5 /* amplifyconfiguration.json */,
 				B12345678901ABD4 /* Assets.xcassets */,
+				6312270A2E844DA500165F7C /* amplify_outputs.json */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -198,8 +261,8 @@
 			);
 			mainGroup = B12345678901ABC0;
 			packageReferences = (
-				63B79E662E428E8900BA52CA /* XCRemoteSwiftPackageReference "cdk-swift" */,
 				A12345678901ABCF /* XCRemoteSwiftPackageReference "amplify-swift" */,
+				6339661C2E859DF1001FC57B /* XCRemoteSwiftPackageReference "cdk-swift" */,
 			);
 			productRefGroup = B12345678901ABCA /* Products */;
 			projectDirPath = "";
@@ -216,8 +279,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				B12345678901ABD7 /* Preview Assets.xcassets in Resources */,
+				6312270B2E844DA500165F7C /* amplify_outputs.json in Resources */,
 				B12345678901ABD5 /* Assets.xcassets in Resources */,
-				B12345678901ABF6 /* amplifyconfiguration.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -237,10 +300,29 @@
 				B12345678901ABEC /* AuthManager.swift in Sources */,
 				B12345678901ABEF /* AuthView.swift in Sources */,
 				B12345678901ABF1 /* SignUpView.swift in Sources */,
+				B12345678901ABF5 /* SignInView.swift in Sources */,
 				B12345678901ABF3 /* ConfirmEmailView.swift in Sources */,
 				B12345678901ABE7 /* Theme.swift in Sources */,
 				B12345678901ABE9 /* WalletLoadingView.swift in Sources */,
 				B12345678901ABCD /* SatsApp.swift in Sources */,
+				B12345678901ABFB /* AmplifyWalletDatabase.swift in Sources */,
+				634D2E252E8C875800217DB3 /* MeltQuoteState.swift in Sources */,
+				634D2E262E8C875800217DB3 /* WalletMetadata.swift in Sources */,
+				634D2E272E8C875800217DB3 /* Transaction.swift in Sources */,
+				634D2E282E8C875800217DB3 /* MeltQuote.swift in Sources */,
+				634D2E292E8C875800217DB3 /* WalletMetadata+Schema.swift in Sources */,
+				634D2E2A2E8C875800217DB3 /* Transaction+Schema.swift in Sources */,
+				634D2E2B2E8C875800217DB3 /* AmplifyModels.swift in Sources */,
+				634D2E2C2E8C875800217DB3 /* MintQuote+Schema.swift in Sources */,
+				634D2E2D2E8C875800217DB3 /* MeltQuote+Schema.swift in Sources */,
+				634D2E2E2E8C875800217DB3 /* MintQuoteState.swift in Sources */,
+				634D2E2F2E8C875800217DB3 /* ProofState.swift in Sources */,
+				634D2E302E8C875800217DB3 /* Proof+Schema.swift in Sources */,
+				634D2E312E8C875800217DB3 /* Proof.swift in Sources */,
+				634D2E322E8C875800217DB3 /* MintQuote.swift in Sources */,
+				B12345678901ABFC /* LocalWalletCache.swift in Sources */,
+				B12345678901ABFD /* UITransaction.swift in Sources */,
+				B12345678901ABFE /* WalletEncryption.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -450,20 +532,12 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		63B79E662E428E8900BA52CA /* XCRemoteSwiftPackageReference "cdk-swift" */ = {
+		6339661C2E859DF1001FC57B /* XCRemoteSwiftPackageReference "cdk-swift" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/cashubtc/cdk-swift";
 			requirement = {
-				branch = main;
-				kind = branch;
-			};
-		};
-		63F68CF92E3D7428004176D7 /* XCRemoteSwiftPackageReference "cdk-swift" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/cashubtc/cdk-swift";
-			requirement = {
-				branch = main;
-				kind = branch;
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.13.0;
 			};
 		};
 		A12345678901ABCF /* XCRemoteSwiftPackageReference "amplify-swift" */ = {
@@ -477,19 +551,14 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		634CCEA82E61164B0028986D /* CashuDevKit */ = {
+		6339661D2E859DF1001FC57B /* CashuDevKit */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 63B79E662E428E8900BA52CA /* XCRemoteSwiftPackageReference "cdk-swift" */;
+			package = 6339661C2E859DF1001FC57B /* XCRemoteSwiftPackageReference "cdk-swift" */;
 			productName = CashuDevKit;
 		};
-		63B79E672E428E8900BA52CA /* CashuDevKit */ = {
+		634D2E142E8C7EC500217DB3 /* CashuDevKit */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 63B79E662E428E8900BA52CA /* XCRemoteSwiftPackageReference "cdk-swift" */;
-			productName = CashuDevKit;
-		};
-		63F68CFA2E3D7428004176D7 /* CashuDevKit */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 63F68CF92E3D7428004176D7 /* XCRemoteSwiftPackageReference "cdk-swift" */;
+			package = 6339661C2E859DF1001FC57B /* XCRemoteSwiftPackageReference "cdk-swift" */;
 			productName = CashuDevKit;
 		};
 		A12345678901ABCD /* Amplify */ = {

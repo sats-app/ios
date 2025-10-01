@@ -180,7 +180,7 @@ struct MintsDrawerView: View {
     }
 }
 
-struct MintInfo {
+struct UIMintInfo {
     let name: String
     let url: String
     let balance: String

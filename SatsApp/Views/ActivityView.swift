@@ -1,30 +1,8 @@
 import SwiftUI
 
-struct Transaction {
-    let id = UUID()
-    let type: TransactionType
-    let amount: Int
-    let description: String
-    let memo: String?
-    let date: Date
-    let status: TransactionStatus
-}
-
-enum TransactionType {
-    case sent
-    case received
-    case request
-}
-
-enum TransactionStatus {
-    case completed
-    case pending
-    case failed
-}
-
 struct ActivityView: View {
     @EnvironmentObject var walletManager: WalletManager
-    @State private var transactions: [Transaction] = []
+    @State private var transactions: [UITransaction] = []
     @State private var isLoading = true
     
     var body: some View {
@@ -77,7 +55,7 @@ struct ActivityView: View {
 }
 
 struct TransactionRowView: View {
-    let transaction: Transaction
+    let transaction: UITransaction
     
     var body: some View {
         HStack {

@@ -1,52 +1,40 @@
 import SwiftUI
 
-struct SignUpView: View {
+struct SignInView: View {
     @EnvironmentObject var authManager: AuthManager
     @State private var email = ""
-    @State private var username = ""
-    
+
     var body: some View {
         VStack(spacing: 30) {
             Spacer()
-            
+
             VStack(spacing: 20) {
-                Text("Sign Up for SatsApp")
+                Text("Welcome Back")
                     .font(.largeTitle)
                     .fontWeight(.bold)
                     .multilineTextAlignment(.center)
-                
-                Text("Create your passwordless account")
+
+                Text("Sign in to your SatsApp account")
                     .font(.body)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
             }
-            
+
             VStack(spacing: 16) {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Email")
                         .font(.headline)
                         .foregroundColor(.primary)
-                    
+
                     TextField("Enter your email", text: $email)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
                         .keyboardType(.emailAddress)
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
                 }
-                
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Username")
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                    
-                    TextField("Enter your username", text: $username)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .autocapitalization(.none)
-                        .disableAutocorrection(true)
-                }
             }
             .padding(.horizontal, 20)
-            
+
             if let error = authManager.error {
                 Text(error)
                     .foregroundColor(.red)
@@ -54,12 +42,12 @@ struct SignUpView: View {
                     .padding(.horizontal)
                     .multilineTextAlignment(.center)
             }
-            
+
             VStack(spacing: 16) {
                 Button(action: {
                     Task {
-                        authManager.authMode = .signUp
-                        await authManager.signUpPasswordless(email: email, username: username)
+                        authManager.authMode = .signIn
+                        await authManager.signInWithOTP(email: email)
                     }
                 }) {
                     if authManager.isLoading {
@@ -79,27 +67,27 @@ struct SignUpView: View {
                             .cornerRadius(10)
                     }
                 }
-                .disabled(authManager.isLoading || email.isEmpty || username.isEmpty)
+                .disabled(authManager.isLoading || email.isEmpty)
 
                 Button(action: {
-                    authManager.authMode = .signIn
+                    authManager.authMode = .signUp
                 }) {
-                    Text("Already have an account? Sign In")
+                    Text("Don't have an account? Sign Up")
                         .font(.footnote)
                         .foregroundColor(.accentColor)
                 }
             }
             .padding(.horizontal, 40)
-            
+
             Spacer()
         }
         .padding()
     }
 }
 
-struct SignUpView_Previews: PreviewProvider {
+struct SignInView_Previews: PreviewProvider {
     static var previews: some View {
-        SignUpView()
+        SignInView()
             .environmentObject(AuthManager())
     }
 }

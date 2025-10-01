@@ -2,12 +2,17 @@ import SwiftUI
 
 struct AuthView: View {
     @EnvironmentObject var authManager: AuthManager
-    
+
     var body: some View {
         if authManager.showConfirmation {
             ConfirmEmailView()
         } else {
-            SignUpView()
+            switch authManager.authMode {
+            case .signUp:
+                SignUpView()
+            case .signIn:
+                SignInView()
+            }
         }
     }
 }

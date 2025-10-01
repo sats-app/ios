@@ -1,6 +1,9 @@
 import Foundation
 import Security
 import CashuDevKit
+import Amplify
+import CryptoKit
+import CommonCrypto
 import os.log
 
 /// Central logging utility for the SatsApp
@@ -51,10 +54,16 @@ class WalletManager: ObservableObject {
         let urls = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
         return urls[0]
     }
-    
+
     private var walletDataURL: URL {
         return documentsURL.appendingPathComponent("wallet_data", isDirectory: true)
     }
+
+    private var database: AmplifyWalletDatabase?
+    private var walletEncryption: WalletEncryption?
+
+    // Dependency injection
+    private weak var authManager: AuthManager?
     
     init() {
         AppLogger.wallet.info("WalletManager: Initializing...")
@@ -102,36 +111,44 @@ class WalletManager: ObservableObject {
         AppLogger.wallet.info("Retrieving mnemonic...")
         let mnemonic = getMnemonicFromKeychain() ?? generateAndStoreMnemonic()
         AppLogger.wallet.info("Mnemonic retrieved/generated: \(!mnemonic.isEmpty)")
-        
+
         // Check if mnemonic is valid
         guard !mnemonic.isEmpty else {
             AppLogger.wallet.error("Mnemonic is empty")
             throw WalletError.failedToGenerateMnemonic
         }
-        
+
         AppLogger.wallet.info("Creating wallet config")
         let walletConfig = WalletConfig(targetProofCount: nil)
-        
-        let walletDatabasePath = walletDataURL.appendingPathComponent("wallet.sqlite").path
-        AppLogger.wallet.info("Creating wallet database with path: \(walletDatabasePath)")
-        let database = try await WalletSqliteDatabase(filePath: walletDatabasePath)
-        
+
+        AppLogger.wallet.info("Initializing wallet encryption with mnemonic")
+        let encryption = WalletEncryption()
+        try await encryption.initializeEncryption(with: mnemonic)
+        self.walletEncryption = encryption
+
+        AppLogger.wallet.info("Creating Amplify wallet database")
+        let amplifyDatabase = AmplifyWalletDatabase(
+            walletEncryption: encryption,
+            authManager: self.authManager
+        )
+        self.database = amplifyDatabase
+
         AppLogger.wallet.info("Initializing wallet with mint: \(self.defaultMintURL)")
         let newWallet = try await Wallet(
             mintUrl: defaultMintURL,
             unit: CurrencyUnit.sat,
             mnemonic: mnemonic,
-            db: database,
+            db: amplifyDatabase,
             config: walletConfig
         )
-        
+
         AppLogger.wallet.info("Wallet created successfully, updating UI...")
         await MainActor.run {
             self.wallet = newWallet
             self.isInitialized = true
             self.isLoading = false
             AppLogger.wallet.info("✅ Wallet initialized successfully with mint: \(self.defaultMintURL)")
-            
+
             // Load initial balance
             self.refreshBalance()
         }
@@ -142,6 +159,11 @@ class WalletManager: ObservableObject {
         Task { @MainActor in
             await initializeWallet()
         }
+    }
+
+    // Set the auth manager for dependency injection
+    func setAuthManager(_ authManager: AuthManager) {
+        self.authManager = authManager
     }
     
     private func getMnemonicFromKeychain() -> String? {
@@ -211,79 +233,38 @@ class WalletManager: ObservableObject {
     }
     
     // MARK: - Transaction History
-    
-    func listTransactions() async -> [Transaction] {
-        guard let wallet = self.wallet else {
-            AppLogger.transaction.debug("Wallet not available, returning mock transactions")
-            // Return some mock transactions for testing
-            let mockTransactions = [
-                Transaction(
-                    type: .received,
-                    amount: 5000,
-                    description: "Received",
-                    memo: "Payment from Alice",
-                    date: Date().addingTimeInterval(-3600), // 1 hour ago
-                    status: .completed
-                ),
-                Transaction(
-                    type: .sent,
-                    amount: 1200,
-                    description: "Sent", 
-                    memo: "Coffee purchase",
-                    date: Date().addingTimeInterval(-7200), // 2 hours ago
-                    status: .completed
-                ),
-                Transaction(
-                    type: .received,
-                    amount: 3000,
-                    description: "Received",
-                    memo: "Tip received",
-                    date: Date().addingTimeInterval(-14400), // 4 hours ago
-                    status: .completed
-                )
-            ]
-            return mockTransactions
+
+    func listTransactions() async -> [UITransaction] {
+        guard let database = self.database else {
+            AppLogger.transaction.debug("Database not available, returning empty transactions")
+            return []
         }
-        
+
         do {
-            // Get proofs by different states to simulate transaction history
-            let allStates: [ProofState] = [.unspent, .spent, .pending]
-            let proofs = try await wallet.getProofsByStates(states: allStates)
-            
-            // Convert proofs to transactions
-            var transactions: [Transaction] = []
-            
-            // For now, create mock transactions based on proofs
-            // In a real implementation, this would need actual transaction tracking
-            for (index, proof) in proofs.enumerated() {
-                let isReceived = index % 2 == 0
-                let mockMemos = [
-                    "Payment from Alice",
-                    "Coffee purchase",
-                    "Lunch money",
-                    "Book payment",
-                    "Tip received",
-                    "Service fee",
-                    "Refund",
-                    "Donation"
-                ]
-                let memo = mockMemos[index % mockMemos.count]
-                
-                // Get actual amount from proof
-                let amount = Int(proof.amount().value)
-                
-                let transaction = Transaction(
-                    type: isReceived ? .received : .sent,
-                    amount: amount > 0 ? amount : 1000 + (index * 100), // Use proof amount or fallback
-                    description: isReceived ? "Received" : "Sent",
-                    memo: memo,
-                    date: Date().addingTimeInterval(-Double(index * 3600)), // Mock dates
-                    status: .completed // Since proofs exist, assume completed
+            // Get transactions from the Amplify database
+            let cdkTransactions = try await database.listTransactions(mintUrl: nil, direction: nil, unit: nil)
+
+            // Convert CDK transactions to UI transactions
+            var transactions: [UITransaction] = []
+
+            for cdkTransaction in cdkTransactions {
+                // Get the actual timestamp from the CDK transaction
+                let timestamp = cdkTransaction.timestamp
+                let transactionDate = Date(timeIntervalSince1970: TimeInterval(timestamp))
+
+                let transaction = UITransaction(
+                    type: cdkTransaction.direction == .incoming ? .received : .sent,
+                    amount: Int(cdkTransaction.amount.value),
+                    description: cdkTransaction.direction == .incoming ? "Received" : "Sent",
+                    memo: cdkTransaction.memo,
+                    date: transactionDate,
+                    status: .completed
                 )
                 transactions.append(transaction)
             }
-            
+
             return transactions.sorted { $0.date > $1.date }
+
         } catch {
             AppLogger.transaction.error("Failed to get transactions: \(error.localizedDescription)")
             return []
@@ -294,10 +275,10 @@ class WalletManager: ObservableObject {
     
     func getBalance() async -> UInt64 {
         guard let wallet = self.wallet else {
-            AppLogger.wallet.debug("Wallet not available, returning mock balance")
-            return 21000 // Return mock balance for testing
+            AppLogger.wallet.debug("Wallet not available")
+            return 0
         }
-        
+
         do {
             let balance = try await wallet.totalBalance()
             return balance.value
@@ -321,14 +302,10 @@ class WalletManager: ObservableObject {
     
     func generateMintQuote(amount: UInt64) async throws -> (String, String, String) {
         guard let wallet = self.wallet else {
-            AppLogger.mint.debug("Wallet not available, returning mock mint quote")
-            // Return mock data for testing
-            try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second delay to simulate network
-            let mockInvoice = "lnbc\(amount)u1p3xnhl2pp5jptserfk3zk4qy42tlucycrfwxhydvlemu9pqr93tuzlv9cc7g3s6qsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygs9q7sqqqqqqqqqqqqqqqqqqqsqqqqqysgx5vwd4hy6tsw56kd5ltx83m7fqd9d7zqj"
-            let mockQuoteId = "mock_quote_\(UUID().uuidString.prefix(8))"
-            return (mockInvoice, "Unpaid", mockQuoteId)
+            AppLogger.mint.error("Wallet not available")
+            throw WalletError.walletNotInitialized
         }
-        
+
         do {
             let amountObj = Amount(value: amount)
             let mintQuote = try await wallet.mintQuote(amount: amountObj, description: nil)
@@ -348,15 +325,10 @@ class WalletManager: ObservableObject {
     
     func checkMintQuoteStatus(quoteId: String) async throws -> String {
         guard self.wallet != nil else {
-            AppLogger.mint.debug("Wallet not available, simulating quote status check")
-            // Simulate payment after some time
-            let randomDelay = Int.random(in: 3...8)
-            if Date().timeIntervalSince1970.truncatingRemainder(dividingBy: Double(randomDelay)) < 2 {
-                return "Paid"
-            }
-            return "Unpaid"
+            AppLogger.mint.error("Wallet not available")
+            throw WalletError.walletNotInitialized
         }
-        
+
         // For now, we'll need to regenerate the quote to check its status
         // This is a limitation - ideally we'd store the MintQuote object
         // or have a dedicated status check method
@@ -366,12 +338,10 @@ class WalletManager: ObservableObject {
     
     func mintTokens(quoteId: String) async throws -> UInt64 {
         guard let wallet = self.wallet else {
-            AppLogger.mint.debug("Wallet not available, simulating minting")
-            // Simulate minting delay
-            try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
-            return 1000 // Return mock minted amount
+            AppLogger.mint.error("Wallet not available")
+            throw WalletError.walletNotInitialized
         }
-        
+
         do {
             let proofs = try await wallet.mint(quoteId: quoteId, amountSplitTarget: SplitTarget.none, spendingConditions: nil)
             let totalMinted = proofs.reduce(0) { total, proof in

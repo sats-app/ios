@@ -2,6 +2,11 @@ import Foundation
 import Amplify
 import AWSCognitoAuthPlugin
 
+enum AuthMode {
+    case signUp
+    case signIn
+}
+
 class AuthManager: ObservableObject {
     @Published var isAuthenticated = false
     @Published var userEmail: String?
@@ -10,114 +15,62 @@ class AuthManager: ObservableObject {
     @Published var error: String?
     @Published var showConfirmation = false
     @Published var confirmationCode = ""
-    
-    private let userPoolId = "us-east-2_zQ8aKO1PI"
-    private let clientId = "1e7o225bcugq1bdo0kvsdccvb2"
-    
+    @Published var authMode: AuthMode = .signUp
+
     private var signUpUsername: String?
-    
+
     init() {
-        configureAmplify()
         loadAuthState()
     }
     
-    private func configureAmplify() {
-        do {
-            let authPlugin = AWSCognitoAuthPlugin()
-            try Amplify.add(plugin: authPlugin)
-            
-            // Use the configuration file approach
-            let config = """
-            {
-                "auth": {
-                    "plugins": {
-                        "awsCognitoAuthPlugin": {
-                            "UserAgent": "aws-amplify-cli/0.1.0",
-                            "Version": "0.1.0",
-                            "IdentityManager": {
-                                "Default": {}
-                            },
-                            "CognitoUserPool": {
-                                "Default": {
-                                    "PoolId": "\(userPoolId)",
-                                    "AppClientId": "\(clientId)",
-                                    "Region": "us-east-2"
-                                }
-                            },
-                            "Auth": {
-                                "Default": {
-                                    "authenticationFlowType": "USER_SRP_AUTH"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            """
-            
-            let configData = config.data(using: .utf8)!
-            let amplifyConfig = try JSONDecoder().decode(AmplifyConfiguration.self, from: configData)
-            try Amplify.configure(amplifyConfig)
-            
-            print("Amplify configured successfully")
-        } catch {
-            print("Failed to configure Amplify: \(error)")
-        }
-    }
-    
     @MainActor
-    func signUpWithPasskey(email: String, username: String) async {
+    func signUpPasswordless(email: String, username: String) async {
         isLoading = true
         error = nil
-        
+
         // Basic validation
         guard isValidEmail(email) else {
             isLoading = false
             error = "Please enter a valid email address"
             return
         }
-        
+
         guard isValidUsername(username) else {
             isLoading = false
             error = "Username must be 3-20 characters and contain only letters, numbers, and underscores"
             return
         }
-        
-        signUpUsername = username
-        
-        let generatedPassword = generateRandomPassword()
-        print("Attempting sign up with:")
-        print("- ClientId: \(clientId)")
-        print("- Username: \(username)")
-        print("- Email: \(email)")
-        print("- Password: \(generatedPassword)")
-        print("- Password length: \(generatedPassword.count)")
-        
+
+        // Store email as the sign-up username
+        signUpUsername = email
+
         let userAttributes = [
             AuthUserAttribute(.email, value: email),
             AuthUserAttribute(.preferredUsername, value: username)
         ]
-        
+
         do {
-            print("Calling Amplify signUp...")
+            print("Starting passwordless sign up with email: \(email)")
+            // For passwordless, we still need to provide a temporary password
+            // This will be replaced by OTP authentication
+            let tempPassword = UUID().uuidString + "Aa1!"
+
             let signUpResult = try await Amplify.Auth.signUp(
-                username: username,
-                password: generatedPassword,
+                username: email,
+                password: tempPassword,
                 options: AuthSignUpRequest.Options(userAttributes: userAttributes)
             )
             print("SignUp result received: \(signUpResult)")
-            
+
             isLoading = false
-            
+
             if case .confirmUser = signUpResult.nextStep {
                 showConfirmation = true
                 userEmail = email
                 self.username = username
             } else if signUpResult.isSignUpComplete {
-                isAuthenticated = true
-                userEmail = email
-                self.username = username
-                saveAuthState()
+                // After sign up, initiate sign in with OTP
+                await signInWithOTP(email: email)
             }
         } catch let error as AuthError {
             isLoading = false
@@ -125,8 +78,8 @@ class AuthManager: ObservableObject {
             case .validation(let field, _, let recoverySuggestion, _):
                 self.error = "Invalid \(field): \(recoverySuggestion)"
             case .service(_, let recoverySuggestion, _):
-                if recoverySuggestion.contains("username") {
-                    self.error = "This username is already taken. Please choose a different username."
+                if recoverySuggestion.contains("already exists") {
+                    self.error = "An account with this email already exists. Please sign in."
                 } else {
                     self.error = recoverySuggestion
                 }
@@ -140,32 +93,84 @@ class AuthManager: ObservableObject {
             print("Sign up error: \(error)")
         }
     }
+
+    @MainActor
+    func signInWithOTP(email: String) async {
+        isLoading = true
+        error = nil
+
+        guard isValidEmail(email) else {
+            isLoading = false
+            error = "Please enter a valid email address"
+            return
+        }
+
+        do {
+            print("Initiating OTP sign in for email: \(email)")
+
+            // Use EMAIL_OTP as preferred factor for passwordless authentication
+            let pluginOptions = AWSAuthSignInOptions(
+                authFlowType: .userAuth(preferredFirstFactor: .emailOTP)
+            )
+
+            let signInResult = try await Amplify.Auth.signIn(
+                username: email,
+                options: .init(pluginOptions: pluginOptions)
+            )
+
+            print("Sign in result: \(signInResult)")
+
+            isLoading = false
+
+            // Check the next step
+            switch signInResult.nextStep {
+            case .confirmSignInWithOTP:
+                showConfirmation = true
+                userEmail = email
+                signUpUsername = email
+            case .done:
+                isAuthenticated = true
+                userEmail = email
+                saveAuthState()
+            default:
+                print("Unexpected next step: \(signInResult.nextStep)")
+            }
+        } catch let error as AuthError {
+            isLoading = false
+            self.error = "Sign in failed: \(error.errorDescription)"
+            print("Sign in error: \(error)")
+        } catch {
+            isLoading = false
+            self.error = "Sign in failed: \(error.localizedDescription)"
+            print("Sign in error: \(error)")
+        }
+    }
     
     @MainActor
     func confirmSignUp() async {
         isLoading = true
         error = nil
-        
-        guard let username = signUpUsername else {
-            error = "Username not found"
+
+        guard let email = signUpUsername else {
+            error = "Email not found"
             isLoading = false
             return
         }
-        
+
         do {
-            print("Calling Amplify confirmSignUp with code: \(confirmationCode)")
+            print("Confirming sign up with code: \(confirmationCode) for email: \(email)")
             let confirmResult = try await Amplify.Auth.confirmSignUp(
-                for: username,
+                for: email,
                 confirmationCode: confirmationCode
             )
             print("ConfirmSignUp result received: \(confirmResult)")
-            
+
             isLoading = false
-            
+
             if confirmResult.isSignUpComplete {
-                isAuthenticated = true
+                // After confirming sign up, initiate OTP sign in
                 showConfirmation = false
-                saveAuthState()
+                await signInWithOTP(email: email)
             }
         } catch let error as AuthError {
             isLoading = false
@@ -186,6 +191,49 @@ class AuthManager: ObservableObject {
             isLoading = false
             self.error = "Confirmation failed: \(error.localizedDescription)"
             print("Confirmation error: \(error)")
+        }
+    }
+
+    @MainActor
+    func confirmOTP() async {
+        isLoading = true
+        error = nil
+
+        do {
+            print("Confirming OTP: \(confirmationCode)")
+            let confirmResult = try await Amplify.Auth.confirmSignIn(
+                challengeResponse: confirmationCode
+            )
+            print("OTP confirmation result: \(confirmResult)")
+
+            isLoading = false
+
+            switch confirmResult.nextStep {
+            case .done:
+                isAuthenticated = true
+                showConfirmation = false
+                saveAuthState()
+
+                // Fetch user attributes after successful sign in
+                let userAttributes = try await Amplify.Auth.fetchUserAttributes()
+                for attribute in userAttributes {
+                    if attribute.key == .email {
+                        userEmail = attribute.value
+                    } else if attribute.key == .preferredUsername {
+                        username = attribute.value
+                    }
+                }
+            default:
+                print("Unexpected next step after OTP confirmation: \(confirmResult.nextStep)")
+            }
+        } catch let error as AuthError {
+            isLoading = false
+            self.error = "OTP verification failed: \(error.errorDescription)"
+            print("OTP confirmation error: \(error)")
+        } catch {
+            isLoading = false
+            self.error = "OTP verification failed: \(error.localizedDescription)"
+            print("OTP confirmation error: \(error)")
         }
     }
     
@@ -211,27 +259,29 @@ class AuthManager: ObservableObject {
         return usernamePred.evaluate(with: username)
     }
     
-    private func generateRandomPassword() -> String {
-        let lowercase = "abcdefghijklmnopqrstuvwxyz"
-        let uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        let numbers = "0123456789"
-        let special = "!@#$%^&*()_+-=[]{}|;:,.<>?"
-        
-        // Ensure at least one character from each required set
-        var password = ""
-        password += String(lowercase.randomElement()!)
-        password += String(uppercase.randomElement()!)
-        password += String(numbers.randomElement()!)
-        password += String(special.randomElement()!)
-        
-        // Fill the rest with random characters to make it 16 characters total
-        let allCharsets = lowercase + uppercase + numbers + special
-        for _ in 0..<12 {
-            password += String(allCharsets.randomElement()!)
+    @MainActor
+    func resendConfirmationCode() async {
+        isLoading = true
+        error = nil
+
+        guard let email = signUpUsername ?? userEmail else {
+            error = "Email not found"
+            isLoading = false
+            return
         }
-        
-        // Shuffle the password to avoid predictable patterns
-        return String(password.shuffled())
+
+        do {
+            print("Resending confirmation code to: \(email)")
+            let result = try await Amplify.Auth.resendSignUpCode(for: email)
+            print("Resend result: \(result)")
+
+            isLoading = false
+            error = "A new code has been sent to your email"
+        } catch {
+            isLoading = false
+            self.error = "Failed to resend code: \(error.localizedDescription)"
+            print("Resend code error: \(error)")
+        }
     }
     
     private func saveAuthState() {
