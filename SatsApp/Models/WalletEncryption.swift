@@ -1,7 +1,6 @@
 import Foundation
 import CryptoKit
 import CashuDevKit
-import os.log
 
 /// Handles wallet data encryption using AES-GCM-128 with the user's seed as the private key
 actor WalletEncryption {

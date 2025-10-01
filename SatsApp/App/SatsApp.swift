@@ -19,9 +19,9 @@ struct SatsApp: App {
             // Use the simplified configuration approach with amplify_outputs.json
             try Amplify.configure(with: .amplifyOutputs)
 
-            print("Amplify configured successfully with amplify_outputs.json")
+            AppLogger.ui.info("Amplify configured successfully with amplify_outputs.json")
         } catch {
-            print("Failed to configure Amplify: \(error)")
+            AppLogger.ui.error("Failed to configure Amplify: \(error.localizedDescription)")
         }
     }
 

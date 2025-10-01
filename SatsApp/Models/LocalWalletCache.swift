@@ -1,6 +1,5 @@
 import Foundation
 import CashuDevKit
-import os.log
 
 /// Local in-memory cache for wallet data that doesn't use Amplify models
 /// Handles Mints, KeySets, Keys, and other non-generated model storage

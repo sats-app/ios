@@ -1,7 +1,6 @@
 import CoreImage
 import CoreImage.CIFilterBuiltins
 import SwiftUI
-import os.log
 
 
 struct DepositSheetView: View {
@@ -332,7 +331,7 @@ struct DepositSheetView: View {
             }
         } catch {
             await MainActor.run {
-                AppLogger.mint.error("Failed to check quote status: \(error.localizedDescription)")
+                AppLogger.network.error("Failed to check quote status: \(error.localizedDescription)")
             }
         }
     }

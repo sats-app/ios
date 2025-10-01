@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		47F4DEDFF443F4806F209AA0 /* AppLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3729603695357C070353FFFC /* AppLogger.swift */; };
 		6312270B2E844DA500165F7C /* amplify_outputs.json in Resources */ = {isa = PBXBuildFile; fileRef = 6312270A2E844DA500165F7C /* amplify_outputs.json */; };
 		6339661E2E859DF1001FC57B /* CashuDevKit in Frameworks */ = {isa = PBXBuildFile; productRef = 6339661D2E859DF1001FC57B /* CashuDevKit */; };
 		634D2E152E8C7EC500217DB3 /* CashuDevKit in Frameworks */ = {isa = PBXBuildFile; productRef = 634D2E142E8C7EC500217DB3 /* CashuDevKit */; };
@@ -49,6 +50,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		3729603695357C070353FFFC /* AppLogger.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppLogger.swift; sourceTree = "<group>"; };
 		6312270A2E844DA500165F7C /* amplify_outputs.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = amplify_outputs.json; sourceTree = "<group>"; };
 		634D2E162E8C875800217DB3 /* AmplifyModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AmplifyModels.swift; sourceTree = "<group>"; };
 		634D2E172E8C875800217DB3 /* MeltQuote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeltQuote.swift; sourceTree = "<group>"; };
@@ -178,6 +180,7 @@
 				B12345678901ABF8 /* LocalWalletCache.swift */,
 				B12345678901ABF9 /* UITransaction.swift */,
 				B12345678901ABFA /* WalletEncryption.swift */,
+				3729603695357C070353FFFC /* AppLogger.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -323,6 +326,7 @@
 				B12345678901ABFC /* LocalWalletCache.swift in Sources */,
 				B12345678901ABFD /* UITransaction.swift in Sources */,
 				B12345678901ABFE /* WalletEncryption.swift in Sources */,
+				47F4DEDFF443F4806F209AA0 /* AppLogger.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

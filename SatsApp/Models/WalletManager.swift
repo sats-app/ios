@@ -4,32 +4,6 @@ import CashuDevKit
 import Amplify
 import CryptoKit
 import CommonCrypto
-import os.log
-
-/// Central logging utility for the SatsApp
-struct AppLogger {
-    /// The subsystem for all app logs
-    static let subsystem = "app.paywithsats"
-    
-    /// Logger for wallet-related operations
-    static let wallet = Logger(subsystem: subsystem, category: "wallet")
-    
-    /// Logger for UI-related operations
-    static let ui = Logger(subsystem: subsystem, category: "ui")
-    
-    /// Logger for transaction-related operations
-    static let transaction = Logger(subsystem: subsystem, category: "transaction")
-    
-    /// Logger for network/API operations
-    static let network = Logger(subsystem: subsystem, category: "network")
-    
-    /// Logger for minting operations
-    static let mint = Logger(subsystem: subsystem, category: "mint")
-    
-    /// Logger for general app operations
-    static let general = Logger(subsystem: subsystem, category: "general")
-}
-
 
 class WalletManager: ObservableObject {
     private let keychainService = "app.paywithsats.keychain"
@@ -236,7 +210,7 @@ class WalletManager: ObservableObject {
 
     func listTransactions() async -> [UITransaction] {
         guard let database = self.database else {
-            AppLogger.transaction.debug("Database not available, returning empty transactions")
+            AppLogger.wallet.debug("Database not available, returning empty transactions")
             return []
         }
 
@@ -266,7 +240,7 @@ class WalletManager: ObservableObject {
             return transactions.sorted { $0.date > $1.date }
 
         } catch {
-            AppLogger.transaction.error("Failed to get transactions: \(error.localizedDescription)")
+            AppLogger.wallet.error("Failed to get transactions: \(error.localizedDescription)")
             return []
         }
     }
@@ -302,7 +276,7 @@ class WalletManager: ObservableObject {
     
     func generateMintQuote(amount: UInt64) async throws -> (String, String, String) {
         guard let wallet = self.wallet else {
-            AppLogger.mint.error("Wallet not available")
+            AppLogger.network.error("Wallet not available")
             throw WalletError.walletNotInitialized
         }
 
@@ -318,27 +292,27 @@ class WalletManager: ObservableObject {
             }
             return (mintQuote.request, statusString, mintQuote.id)
         } catch {
-            AppLogger.mint.error("Failed to generate mint quote: \(error.localizedDescription)")
+            AppLogger.network.error("Failed to generate mint quote: \(error.localizedDescription)")
             throw error
         }
     }
-    
+
     func checkMintQuoteStatus(quoteId: String) async throws -> String {
         guard self.wallet != nil else {
-            AppLogger.mint.error("Wallet not available")
+            AppLogger.network.error("Wallet not available")
             throw WalletError.walletNotInitialized
         }
 
         // For now, we'll need to regenerate the quote to check its status
         // This is a limitation - ideally we'd store the MintQuote object
         // or have a dedicated status check method
-        AppLogger.mint.warning("Cannot check quote status directly - method not available in current API")
+        AppLogger.network.warning("Cannot check quote status directly - method not available in current API")
         return "Unpaid" // Default to unpaid for now
     }
-    
+
     func mintTokens(quoteId: String) async throws -> UInt64 {
         guard let wallet = self.wallet else {
-            AppLogger.mint.error("Wallet not available")
+            AppLogger.network.error("Wallet not available")
             throw WalletError.walletNotInitialized
         }
 
@@ -347,10 +321,10 @@ class WalletManager: ObservableObject {
             let totalMinted = proofs.reduce(0) { total, proof in
                 total + proof.amount().value
             }
-            AppLogger.mint.info("✅ Successfully minted \(totalMinted) sats from quote \(quoteId)")
+            AppLogger.network.info("✅ Successfully minted \(totalMinted) sats from quote \(quoteId)")
             return totalMinted
         } catch {
-            AppLogger.mint.error("Failed to mint tokens: \(error.localizedDescription)")
+            AppLogger.network.error("Failed to mint tokens: \(error.localizedDescription)")
             throw error
         }
     }

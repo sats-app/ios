@@ -50,7 +50,7 @@ class AuthManager: ObservableObject {
         ]
 
         do {
-            print("Starting passwordless sign up with email: \(email)")
+            AppLogger.auth.debug("Starting passwordless sign up with email: \(email)")
             // For passwordless, we still need to provide a temporary password
             // This will be replaced by OTP authentication
             let tempPassword = UUID().uuidString + "Aa1!"
@@ -60,7 +60,7 @@ class AuthManager: ObservableObject {
                 password: tempPassword,
                 options: AuthSignUpRequest.Options(userAttributes: userAttributes)
             )
-            print("SignUp result received: \(signUpResult)")
+            AppLogger.auth.debug("SignUp result received: \(String(describing: signUpResult))")
 
             isLoading = false
 
@@ -86,11 +86,11 @@ class AuthManager: ObservableObject {
             default:
                 self.error = "Sign up failed: \(error.errorDescription)"
             }
-            print("Amplify Auth error: \(error)")
+            AppLogger.auth.error("Sign up failed: \(error.errorDescription ?? "Unknown error")")
         } catch {
             isLoading = false
             self.error = "Sign up failed: \(error.localizedDescription)"
-            print("Sign up error: \(error)")
+            AppLogger.auth.error("Sign up failed: \(error.localizedDescription)")
         }
     }
 
@@ -106,7 +106,7 @@ class AuthManager: ObservableObject {
         }
 
         do {
-            print("Initiating OTP sign in for email: \(email)")
+            AppLogger.auth.debug("Initiating OTP sign in for email: \(email)")
 
             // Use EMAIL_OTP as preferred factor for passwordless authentication
             let pluginOptions = AWSAuthSignInOptions(
@@ -118,7 +118,7 @@ class AuthManager: ObservableObject {
                 options: .init(pluginOptions: pluginOptions)
             )
 
-            print("Sign in result: \(signInResult)")
+            AppLogger.auth.debug("Sign in result: \(String(describing: signInResult.nextStep))")
 
             isLoading = false
 
@@ -132,17 +132,18 @@ class AuthManager: ObservableObject {
                 isAuthenticated = true
                 userEmail = email
                 saveAuthState()
+                AppLogger.auth.info("User signed in successfully")
             default:
-                print("Unexpected next step: \(signInResult.nextStep)")
+                AppLogger.auth.warning("Unexpected sign in step: \(String(describing: signInResult.nextStep))")
             }
         } catch let error as AuthError {
             isLoading = false
             self.error = "Sign in failed: \(error.errorDescription)"
-            print("Sign in error: \(error)")
+            AppLogger.auth.error("Sign in failed: \(error.errorDescription ?? "Unknown error")")
         } catch {
             isLoading = false
             self.error = "Sign in failed: \(error.localizedDescription)"
-            print("Sign in error: \(error)")
+            AppLogger.auth.error("Sign in failed: \(error.localizedDescription)")
         }
     }
     
@@ -158,12 +159,12 @@ class AuthManager: ObservableObject {
         }
 
         do {
-            print("Confirming sign up with code: \(confirmationCode) for email: \(email)")
+            AppLogger.auth.debug("Confirming sign up for email: \(email)")
             let confirmResult = try await Amplify.Auth.confirmSignUp(
                 for: email,
                 confirmationCode: confirmationCode
             )
-            print("ConfirmSignUp result received: \(confirmResult)")
+            AppLogger.auth.debug("Sign up confirmation result: \(String(describing: confirmResult.isSignUpComplete))")
 
             isLoading = false
 
@@ -186,11 +187,11 @@ class AuthManager: ObservableObject {
             default:
                 self.error = "Confirmation failed: \(error.errorDescription)"
             }
-            print("Amplify Auth error: \(error)")
+            AppLogger.auth.error("Sign up confirmation failed: \(error.errorDescription ?? "Unknown error")")
         } catch {
             isLoading = false
             self.error = "Confirmation failed: \(error.localizedDescription)"
-            print("Confirmation error: \(error)")
+            AppLogger.auth.error("Sign up confirmation failed: \(error.localizedDescription)")
         }
     }
 
@@ -200,11 +201,11 @@ class AuthManager: ObservableObject {
         error = nil
 
         do {
-            print("Confirming OTP: \(confirmationCode)")
+            AppLogger.auth.debug("Confirming OTP")
             let confirmResult = try await Amplify.Auth.confirmSignIn(
                 challengeResponse: confirmationCode
             )
-            print("OTP confirmation result: \(confirmResult)")
+            AppLogger.auth.debug("OTP confirmation result: \(String(describing: confirmResult.nextStep))")
 
             isLoading = false
 
@@ -223,17 +224,18 @@ class AuthManager: ObservableObject {
                         username = attribute.value
                     }
                 }
+                AppLogger.auth.info("User authenticated successfully")
             default:
-                print("Unexpected next step after OTP confirmation: \(confirmResult.nextStep)")
+                AppLogger.auth.warning("Unexpected next step after OTP confirmation: \(String(describing: confirmResult.nextStep))")
             }
         } catch let error as AuthError {
             isLoading = false
             self.error = "OTP verification failed: \(error.errorDescription)"
-            print("OTP confirmation error: \(error)")
+            AppLogger.auth.error("OTP confirmation failed: \(error.errorDescription ?? "Unknown error")")
         } catch {
             isLoading = false
             self.error = "OTP verification failed: \(error.localizedDescription)"
-            print("OTP confirmation error: \(error)")
+            AppLogger.auth.error("OTP confirmation failed: \(error.localizedDescription)")
         }
     }
     
@@ -271,16 +273,16 @@ class AuthManager: ObservableObject {
         }
 
         do {
-            print("Resending confirmation code to: \(email)")
+            AppLogger.auth.debug("Resending confirmation code to: \(email)")
             let result = try await Amplify.Auth.resendSignUpCode(for: email)
-            print("Resend result: \(result)")
+            AppLogger.auth.debug("Resend result: \(String(describing: result))")
 
             isLoading = false
             error = "A new code has been sent to your email"
         } catch {
             isLoading = false
             self.error = "Failed to resend code: \(error.localizedDescription)"
-            print("Resend code error: \(error)")
+            AppLogger.auth.error("Resend code failed: \(error.localizedDescription)")
         }
     }
     

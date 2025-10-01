@@ -1,7 +1,6 @@
 import Foundation
 import Amplify
 import CashuDevKit
-import os.log
 
 /// Amplify-based implementation of WalletDatabase using generated data models
 final class AmplifyWalletDatabase: WalletDatabase, @unchecked Sendable {
