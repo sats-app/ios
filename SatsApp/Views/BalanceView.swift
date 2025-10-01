@@ -138,49 +138,196 @@ struct AdaptiveSheetModifier<SheetContent: View>: ViewModifier {
 
 struct MintsDrawerView: View {
     @EnvironmentObject var walletManager: WalletManager
-    @State private var mints: [String] = []
-    
+    @State private var mints: [UIMintInfo] = []
+    @State private var isLoading = true
+    @State private var showingAddMint = false
+    @State private var newMintUrl = ""
+    @State private var showingError = false
+    @State private var errorMessage = ""
+
     var body: some View {
         NavigationView {
-            List(mints, id: \.self) { mintUrl in
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(URL(string: mintUrl)?.host ?? "Unknown Mint")
-                            .font(.headline)
-                            .fontWeight(.medium)
-                            .foregroundColor(Color.orange)
-                        
-                        Text(mintUrl)
-                            .font(.caption)
-                            .foregroundColor(Color.orange.opacity(0.7))
+            Group {
+                if isLoading {
+                    ProgressView()
+                } else if mints.isEmpty {
+                    Text("No mints configured")
+                        .foregroundColor(.gray)
+                } else {
+                    List {
+                        ForEach(mints, id: \.url) { mint in
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(mint.name)
+                                        .font(.headline)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(Color.orange)
+
+                                    Text(mint.url)
+                                        .font(.caption)
+                                        .foregroundColor(Color.orange.opacity(0.7))
+                                }
+
+                                Spacer()
+
+                                Text(mint.balance)
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(Color.orange)
+                            }
+                            .padding(.vertical, 4)
+                        }
+                        .onDelete(perform: deleteMint)
                     }
-                    
-                    Spacer()
-                    
-                    Text("Connected")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(Color.orange)
                 }
-                .padding(.vertical, 4)
             }
             .navigationTitle("Mints")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
+                        showingAddMint = true
+                    }) {
+                        Image(systemName: "plus")
+                            .foregroundColor(.orange)
+                    }
+                }
+            }
+            .sheet(isPresented: $showingAddMint) {
+                AddMintView(onAdd: { url in
+                    Task {
+                        await addMint(url: url)
+                    }
+                })
+            }
+            .alert("Error", isPresented: $showingError) {
+                Button("OK") {}
+            } message: {
+                Text(errorMessage)
+            }
         }
         .task {
             await loadMints()
         }
     }
-    
+
     private func loadMints() async {
-        // For now, just show the default mint since wallet doesn't expose mint list directly
-        await MainActor.run {
-            mints = ["https://fake.thesimplekid.dev"]
+        isLoading = true
+
+        do {
+            let mintUrls = try await walletManager.getMints()
+            let balances = try await walletManager.getMintBalances()
+
+            await MainActor.run {
+                mints = mintUrls.map { url in
+                    let balance = balances[url] ?? 0
+                    let formatter = NumberFormatter()
+                    formatter.numberStyle = .decimal
+                    formatter.groupingSeparator = ","
+                    formatter.usesGroupingSeparator = true
+                    let balanceString = (formatter.string(from: NSNumber(value: balance)) ?? "0") + " sat"
+
+                    return UIMintInfo(
+                        name: URL(string: url)?.host ?? "Unknown Mint",
+                        url: url,
+                        balance: balanceString
+                    )
+                }
+                isLoading = false
+            }
+        } catch {
+            await MainActor.run {
+                errorMessage = "Failed to load mints: \(error.localizedDescription)"
+                showingError = true
+                isLoading = false
+            }
+        }
+    }
+
+    private func addMint(url: String) async {
+        do {
+            try await walletManager.addMint(mintUrl: url)
+            await loadMints()
+            await MainActor.run {
+                showingAddMint = false
+                newMintUrl = ""
+            }
+        } catch {
+            await MainActor.run {
+                errorMessage = "Failed to add mint: \(error.localizedDescription)"
+                showingError = true
+            }
+        }
+    }
+
+    private func deleteMint(at offsets: IndexSet) {
+        guard let index = offsets.first else { return }
+        let mintUrl = mints[index].url
+
+        Task {
+            do {
+                try await walletManager.removeMint(mintUrl: mintUrl)
+                await loadMints()
+            } catch {
+                await MainActor.run {
+                    errorMessage = "Failed to remove mint: \(error.localizedDescription)"
+                    showingError = true
+                }
+            }
         }
     }
 }
 
-struct UIMintInfo {
+struct AddMintView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var mintUrl: String = ""
+    let onAdd: (String) -> Void
+
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 20) {
+                TextField("Mint URL", text: $mintUrl)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .autocapitalization(.none)
+                    .keyboardType(.URL)
+                    .padding(.horizontal)
+
+                Button("Add Mint") {
+                    onAdd(mintUrl)
+                    dismiss()
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
+                .background(isValidUrl ? Color.orange : Color.gray)
+                .foregroundColor(.white)
+                .cornerRadius(12)
+                .font(.headline)
+                .disabled(!isValidUrl)
+                .padding(.horizontal)
+
+                Spacer()
+            }
+            .padding(.top)
+            .navigationTitle("Add Mint")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+
+    private var isValidUrl: Bool {
+        guard let url = URL(string: mintUrl) else { return false }
+        return url.scheme == "https" || url.scheme == "http"
+    }
+}
+
+struct UIMintInfo: Identifiable {
+    let id = UUID()
     let name: String
     let url: String
     let balance: String

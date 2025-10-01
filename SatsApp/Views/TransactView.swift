@@ -157,11 +157,17 @@ struct NumberPadView: View {
 struct TransactSheetView: View {
     let amount: String
     let mode: TransactMode
+    @EnvironmentObject var walletManager: WalletManager
     @State private var selectedPaymentMethod: PaymentMethod = .link
+    @State private var selectedMintUrl: String = ""
+    @State private var availableMints: [String] = []
+    @State private var isLoadingMints = true
     @State private var memo: String = ""
     @State private var isViewableByRecipient: Bool = false
     @State private var isLoading: Bool = false
     @State private var showSuccess: Bool = false
+    @State private var showingError = false
+    @State private var errorMessage = ""
     @Environment(\.presentationMode) var presentationMode
     
     enum PaymentMethod: String, CaseIterable {
@@ -220,18 +226,48 @@ struct TransactSheetView: View {
                         Circle()
                             .fill(Color.orange)
                             .frame(width: 60, height: 60)
-                        
+
                         Image(systemName: mode.iconName)
                             .font(.title)
                             .foregroundColor(Color.white)
                     }
-                    
+
                     Text("\(amount) sat")
                         .font(.title2)
                         .bold()
                         .foregroundColor(Color.orange)
                 }
                 .padding(.top, 20)
+
+                // Mint selector (only for pay mode)
+                if mode == .pay {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Select Mint")
+                            .font(.headline)
+                            .fontWeight(.medium)
+                            .foregroundColor(Color.orange)
+
+                        if isLoadingMints {
+                            ProgressView()
+                        } else if availableMints.isEmpty {
+                            Text("No mints available")
+                                .foregroundColor(.gray)
+                        } else {
+                            Picker("Mint", selection: $selectedMintUrl) {
+                                ForEach(availableMints, id: \.self) { mint in
+                                    Text(URL(string: mint)?.host ?? mint)
+                                        .tag(mint)
+                                }
+                            }
+                            .pickerStyle(MenuPickerStyle())
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.gray.opacity(0.2))
+                            .cornerRadius(8)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
                 
                 VStack(alignment: .leading, spacing: 16) {
                     Text("Pay via")
@@ -337,12 +373,46 @@ struct TransactSheetView: View {
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
+        .alert("Error", isPresented: $showingError) {
+            Button("OK") {}
+        } message: {
+            Text(errorMessage)
+        }
+        .task {
+            await loadMints()
+        }
     }
-    
+
+    private func loadMints() async {
+        isLoadingMints = true
+
+        do {
+            let mints = try await walletManager.getMints()
+            await MainActor.run {
+                self.availableMints = mints
+                if !mints.isEmpty && selectedMintUrl.isEmpty {
+                    self.selectedMintUrl = mints[0]
+                }
+                self.isLoadingMints = false
+            }
+        } catch {
+            await MainActor.run {
+                showError("Failed to load mints: \(error.localizedDescription)")
+                self.isLoadingMints = false
+            }
+        }
+    }
+
+    private func showError(_ message: String) {
+        errorMessage = message
+        showingError = true
+    }
+
     private func handleTransaction() {
         isLoading = true
-        
-        // Simulate network request with timer
+
+        // TODO: Implement actual payment logic using walletManager
+        // For now, simulate network request with timer
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
             isLoading = false
             showSuccess = true

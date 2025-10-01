@@ -10,7 +10,7 @@ class WalletManager: ObservableObject {
     private let mnemonicKey = "wallet_mnemonic"
     let defaultMintURL = "https://fake.thesimplekid.dev"
     
-    @Published var wallet: Wallet?
+    @Published var wallet: MultiMintWallet?
     @Published var isInitialized = false
     @Published var initializationError: String?
     @Published var isLoading = true
@@ -107,21 +107,24 @@ class WalletManager: ObservableObject {
         )
         self.database = amplifyDatabase
 
-        AppLogger.wallet.info("Initializing wallet with mint: \(self.defaultMintURL)")
-        let newWallet = try await Wallet(
-            mintUrl: defaultMintURL,
+        AppLogger.wallet.info("Initializing MultiMintWallet")
+        let newWallet = try await MultiMintWallet(
             unit: CurrencyUnit.sat,
             mnemonic: mnemonic,
-            db: amplifyDatabase,
-            config: walletConfig
+            db: amplifyDatabase
         )
+
+        // Add the default mint
+        AppLogger.wallet.info("Adding default mint: \(self.defaultMintURL)")
+        let mintUrl = MintUrl(url: defaultMintURL)
+        try await newWallet.addMint(mintUrl: mintUrl, targetProofCount: nil)
 
         AppLogger.wallet.info("Wallet created successfully, updating UI...")
         await MainActor.run {
             self.wallet = newWallet
             self.isInitialized = true
             self.isLoading = false
-            AppLogger.wallet.info("✅ Wallet initialized successfully with mint: \(self.defaultMintURL)")
+            AppLogger.wallet.info("✅ MultiMintWallet initialized successfully with default mint: \(self.defaultMintURL)")
 
             // Load initial balance
             self.refreshBalance()
@@ -208,15 +211,15 @@ class WalletManager: ObservableObject {
     
     // MARK: - Transaction History
 
-    func listTransactions() async -> [UITransaction] {
-        guard let database = self.database else {
-            AppLogger.wallet.debug("Database not available, returning empty transactions")
+    func listTransactions(direction: TransactionDirection? = nil) async -> [UITransaction] {
+        guard let wallet = self.wallet else {
+            AppLogger.wallet.debug("Wallet not available, returning empty transactions")
             return []
         }
 
         do {
-            // Get transactions from the Amplify database
-            let cdkTransactions = try await database.listTransactions(mintUrl: nil, direction: nil, unit: nil)
+            // Get transactions from the wallet, optionally filtered by direction
+            let cdkTransactions = try await wallet.listTransactions(direction: direction)
 
             // Convert CDK transactions to UI transactions
             var transactions: [UITransaction] = []
@@ -245,8 +248,64 @@ class WalletManager: ObservableObject {
         }
     }
     
+    // MARK: - Mint Management
+
+    func addMint(mintUrl: String) async throws {
+        guard let wallet = self.wallet else {
+            AppLogger.wallet.error("Wallet not available")
+            throw WalletError.walletNotInitialized
+        }
+
+        AppLogger.wallet.info("Adding mint: \(mintUrl)")
+        let mint = MintUrl(url: mintUrl)
+        try await wallet.addMint(mintUrl: mint, targetProofCount: nil)
+        AppLogger.wallet.info("✅ Mint added successfully: \(mintUrl)")
+    }
+
+    func removeMint(mintUrl: String) async throws {
+        guard let wallet = self.wallet else {
+            AppLogger.wallet.error("Wallet not available")
+            throw WalletError.walletNotInitialized
+        }
+
+        AppLogger.wallet.info("Removing mint: \(mintUrl)")
+        let mint = MintUrl(url: mintUrl)
+        try await wallet.removeMint(mintUrl: mint)
+        AppLogger.wallet.info("✅ Mint removed successfully: \(mintUrl)")
+    }
+
+    func getMints() async throws -> [String] {
+        guard let wallet = self.wallet else {
+            AppLogger.wallet.debug("Wallet not available")
+            return []
+        }
+
+        let mints = await wallet.getMintUrls()
+        AppLogger.wallet.debug("Retrieved \(mints.count) mints")
+        return mints
+    }
+
+    func getMintBalances() async throws -> [String: UInt64] {
+        guard let wallet = self.wallet else {
+            AppLogger.wallet.debug("Wallet not available")
+            return [:]
+        }
+
+        do {
+            let balances = try await wallet.getBalances()
+            var result: [String: UInt64] = [:]
+            for (mintUrlString, amount) in balances {
+                result[mintUrlString] = amount.value
+            }
+            return result
+        } catch {
+            AppLogger.wallet.error("Failed to get mint balances: \(error.localizedDescription)")
+            throw error
+        }
+    }
+
     // MARK: - Balance
-    
+
     func getBalance() async -> UInt64 {
         guard let wallet = self.wallet else {
             AppLogger.wallet.debug("Wallet not available")
@@ -273,16 +332,17 @@ class WalletManager: ObservableObject {
     }
     
     // MARK: - Mint Quote
-    
-    func generateMintQuote(amount: UInt64) async throws -> (String, String, String) {
+
+    func generateMintQuote(mintUrl: String, amount: UInt64) async throws -> (String, String, String) {
         guard let wallet = self.wallet else {
             AppLogger.network.error("Wallet not available")
             throw WalletError.walletNotInitialized
         }
 
         do {
+            let mint = MintUrl(url: mintUrl)
             let amountObj = Amount(value: amount)
-            let mintQuote = try await wallet.mintQuote(amount: amountObj, description: nil)
+            let mintQuote = try await wallet.mintQuote(mintUrl: mint, amount: amountObj, description: nil)
             let state = mintQuote.state
             let statusString = switch state {
             case .unpaid: "Unpaid"
@@ -297,27 +357,42 @@ class WalletManager: ObservableObject {
         }
     }
 
-    func checkMintQuoteStatus(quoteId: String) async throws -> String {
-        guard self.wallet != nil else {
-            AppLogger.network.error("Wallet not available")
+    func checkMintQuoteStatus(mintUrl: String, quoteId: String) async throws -> String {
+        guard let database = self.database else {
+            AppLogger.network.error("Database not available")
             throw WalletError.walletNotInitialized
         }
 
-        // For now, we'll need to regenerate the quote to check its status
-        // This is a limitation - ideally we'd store the MintQuote object
-        // or have a dedicated status check method
-        AppLogger.network.warning("Cannot check quote status directly - method not available in current API")
-        return "Unpaid" // Default to unpaid for now
+        do {
+            // Check the quote status from the database
+            guard let mintQuote = try await database.getMintQuote(quoteId: quoteId) else {
+                AppLogger.network.warning("Mint quote \(quoteId) not found in database")
+                return "Unpaid"
+            }
+
+            let state = mintQuote.state
+            let statusString = switch state {
+            case .unpaid: "Unpaid"
+            case .paid: "Paid"
+            case .pending: "Pending"
+            case .issued: "Issued"
+            }
+            return statusString
+        } catch {
+            AppLogger.network.error("Failed to check mint quote status: \(error.localizedDescription)")
+            throw error
+        }
     }
 
-    func mintTokens(quoteId: String) async throws -> UInt64 {
+    func mintTokens(mintUrl: String, quoteId: String) async throws -> UInt64 {
         guard let wallet = self.wallet else {
             AppLogger.network.error("Wallet not available")
             throw WalletError.walletNotInitialized
         }
 
         do {
-            let proofs = try await wallet.mint(quoteId: quoteId, amountSplitTarget: SplitTarget.none, spendingConditions: nil)
+            let mint = MintUrl(url: mintUrl)
+            let proofs = try await wallet.mint(mintUrl: mint, quoteId: quoteId, spendingConditions: nil)
             let totalMinted = proofs.reduce(0) { total, proof in
                 total + proof.amount().value
             }
@@ -325,6 +400,124 @@ class WalletManager: ObservableObject {
             return totalMinted
         } catch {
             AppLogger.network.error("Failed to mint tokens: \(error.localizedDescription)")
+            throw error
+        }
+    }
+
+    // MARK: - Melt Quote (Pay Lightning Invoice)
+
+    func generateMeltQuote(mintUrl: String, invoice: String) async throws -> (String, UInt64, UInt64) {
+        guard let wallet = self.wallet else {
+            AppLogger.network.error("Wallet not available")
+            throw WalletError.walletNotInitialized
+        }
+
+        do {
+            let mint = MintUrl(url: mintUrl)
+            let meltQuote = try await wallet.meltQuote(mintUrl: mint, request: invoice, options: nil)
+            AppLogger.network.info("Generated melt quote: \(meltQuote.id)")
+            return (meltQuote.id, meltQuote.amount.value, meltQuote.feeReserve.value)
+        } catch {
+            AppLogger.network.error("Failed to generate melt quote: \(error.localizedDescription)")
+            throw error
+        }
+    }
+
+    func meltTokens(mintUrl: String, invoice: String) async throws -> (UInt64, String?) {
+        guard let wallet = self.wallet else {
+            AppLogger.network.error("Wallet not available")
+            throw WalletError.walletNotInitialized
+        }
+
+        do {
+            let meltResponse = try await wallet.melt(bolt11: invoice, options: nil, maxFee: nil)
+            AppLogger.network.info("✅ Successfully melted tokens for invoice")
+            return (meltResponse.amount.value, meltResponse.preimage)
+        } catch {
+            AppLogger.network.error("Failed to melt tokens: \(error.localizedDescription)")
+            throw error
+        }
+    }
+
+    // MARK: - Token Operations (Send/Receive)
+
+    func send(mintUrl: String, amount: UInt64, memo: String?) async throws -> String {
+        guard let wallet = self.wallet else {
+            AppLogger.network.error("Wallet not available")
+            throw WalletError.walletNotInitialized
+        }
+
+        do {
+            let mint = MintUrl(url: mintUrl)
+            let amountObj = Amount(value: amount)
+            let sendOptions = SendOptions(
+                memo: nil,
+                conditions: nil,
+                amountSplitTarget: SplitTarget.none,
+                sendKind: SendKind.onlineExact,
+                includeFee: false,
+                maxProofs: nil,
+                metadata: [:]
+            )
+            let options = MultiMintSendOptions(
+                allowTransfer: false,
+                maxTransferAmount: nil,
+                allowedMints: [],
+                excludedMints: [],
+                sendOptions: sendOptions
+            )
+            let preparedSend = try await wallet.prepareSend(mintUrl: mint, amount: amountObj, options: options)
+            let token = try await preparedSend.confirm(memo: memo)
+            let tokenString = token.encode()
+            AppLogger.network.info("✅ Created send token for \(amount) sats")
+            return tokenString
+        } catch {
+            AppLogger.network.error("Failed to create send token: \(error.localizedDescription)")
+            throw error
+        }
+    }
+
+    func receive(tokenString: String) async throws -> UInt64 {
+        guard let wallet = self.wallet else {
+            AppLogger.network.error("Wallet not available")
+            throw WalletError.walletNotInitialized
+        }
+
+        do {
+            // Decode the token string to Token
+            let token = try Token.decode(encodedToken: tokenString)
+            let receiveOptions = ReceiveOptions(
+                amountSplitTarget: SplitTarget.none,
+                p2pkSigningKeys: [],
+                preimages: [],
+                metadata: [:]
+            )
+            let options = MultiMintReceiveOptions(
+                allowUntrusted: false,
+                transferToMint: nil,
+                receiveOptions: receiveOptions
+            )
+            let receivedAmount = try await wallet.receive(token: token, options: options)
+            AppLogger.network.info("✅ Received \(receivedAmount.value) sats")
+            return receivedAmount.value
+        } catch {
+            AppLogger.network.error("Failed to receive token: \(error.localizedDescription)")
+            throw error
+        }
+    }
+
+    func swap(amount: UInt64) async throws {
+        guard let wallet = self.wallet else {
+            AppLogger.network.error("Wallet not available")
+            throw WalletError.walletNotInitialized
+        }
+
+        do {
+            let amountObj = Amount(value: amount)
+            _ = try await wallet.swap(amount: amountObj, spendingConditions: nil)
+            AppLogger.network.info("✅ Swapped \(amount) sats between mints")
+        } catch {
+            AppLogger.network.error("Failed to swap tokens: \(error.localizedDescription)")
             throw error
         }
     }

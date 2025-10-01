@@ -7,6 +7,9 @@ struct DepositSheetView: View {
     @EnvironmentObject var walletManager: WalletManager
     @Environment(\.dismiss) private var dismiss
     @State private var amount: String = ""
+    @State private var selectedMintUrl: String = ""
+    @State private var availableMints: [String] = []
+    @State private var isLoadingMints = true
     @State private var isLoading = false
     @State private var depositRequest: String?
     @State private var mintQuoteStatus: String?
@@ -55,6 +58,9 @@ struct DepositSheetView: View {
         } message: {
             Text(errorMessage)
         }
+        .task {
+            await loadMints()
+        }
     }
 
     private var amountInputView: some View {
@@ -65,11 +71,36 @@ struct DepositSheetView: View {
                     .fontWeight(.semibold)
                     .foregroundColor(.primary)
 
-                TextField("Amount", text: $amount)
-                    .keyboardType(.numberPad)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .font(.title3)
-                    .multilineTextAlignment(.center)
+                if isLoadingMints {
+                    ProgressView()
+                } else if availableMints.isEmpty {
+                    Text("No mints available")
+                        .foregroundColor(.gray)
+                } else {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Select Mint")
+                            .font(.headline)
+                            .foregroundColor(.secondary)
+
+                        Picker("Mint", selection: $selectedMintUrl) {
+                            ForEach(availableMints, id: \.self) { mint in
+                                Text(URL(string: mint)?.host ?? mint)
+                                    .tag(mint)
+                            }
+                        }
+                        .pickerStyle(MenuPickerStyle())
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.gray.opacity(0.1))
+                        .cornerRadius(8)
+                    }
+
+                    TextField("Amount", text: $amount)
+                        .keyboardType(.numberPad)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .font(.title3)
+                        .multilineTextAlignment(.center)
+                }
             }
 
             Button(action: generateDeposit) {
@@ -84,11 +115,11 @@ struct DepositSheetView: View {
             }
             .frame(maxWidth: .infinity)
             .frame(height: 50)
-            .background(isValidAmount ? Color.orange : Color.gray)
+            .background(canGenerateDeposit ? Color.orange : Color.gray)
             .foregroundColor(.white)
             .cornerRadius(12)
             .font(.headline)
-            .disabled(!isValidAmount || isLoading)
+            .disabled(!canGenerateDeposit || isLoading)
         }
         .padding(20)
     }
@@ -234,11 +265,31 @@ struct DepositSheetView: View {
         .padding(20)
     }
 
-    private var isValidAmount: Bool {
+    private var canGenerateDeposit: Bool {
         guard let amountValue = Int(amount), amountValue > 0 else {
             return false
         }
-        return true
+        return !selectedMintUrl.isEmpty && !isLoadingMints
+    }
+
+    private func loadMints() async {
+        isLoadingMints = true
+
+        do {
+            let mints = try await walletManager.getMints()
+            await MainActor.run {
+                self.availableMints = mints
+                if !mints.isEmpty && selectedMintUrl.isEmpty {
+                    self.selectedMintUrl = mints[0]
+                }
+                self.isLoadingMints = false
+            }
+        } catch {
+            await MainActor.run {
+                showError("Failed to load mints: \(error.localizedDescription)")
+                self.isLoadingMints = false
+            }
+        }
     }
 
     private func generateDeposit() {
@@ -247,11 +298,17 @@ struct DepositSheetView: View {
             return
         }
 
+        guard !selectedMintUrl.isEmpty else {
+            showError("Please select a mint")
+            return
+        }
+
         isLoading = true
 
         Task {
             do {
                 let (request, status, id) = try await walletManager.generateMintQuote(
+                    mintUrl: selectedMintUrl,
                     amount: amountValue)
 
                 await MainActor.run {
@@ -259,7 +316,7 @@ struct DepositSheetView: View {
                     self.mintQuoteStatus = status
                     self.quoteId = id
                     self.isLoading = false
-                    
+
                     // Start polling for payment status
                     startPolling()
                 }
@@ -318,12 +375,17 @@ struct DepositSheetView: View {
     }
     
     private func checkQuoteStatus(quoteId: String) async {
+        guard !selectedMintUrl.isEmpty else {
+            AppLogger.network.error("No mint URL selected")
+            return
+        }
+
         do {
-            let status = try await walletManager.checkMintQuoteStatus(quoteId: quoteId)
-            
+            let status = try await walletManager.checkMintQuoteStatus(mintUrl: selectedMintUrl, quoteId: quoteId)
+
             await MainActor.run {
                 self.mintQuoteStatus = status
-                
+
                 if status == "Paid" {
                     stopPolling()
                     performMinting(quoteId: quoteId)
@@ -335,21 +397,25 @@ struct DepositSheetView: View {
             }
         }
     }
-    
+
     private func performMinting(quoteId: String) {
         guard !isMinting else { return }
-        
+        guard !selectedMintUrl.isEmpty else {
+            showError("No mint URL selected")
+            return
+        }
+
         isMinting = true
-        
+
         Task {
             do {
-                let mintedAmount = try await walletManager.mintTokens(quoteId: quoteId)
-                
+                let mintedAmount = try await walletManager.mintTokens(mintUrl: selectedMintUrl, quoteId: quoteId)
+
                 await MainActor.run {
                     self.mintedAmount = mintedAmount
                     self.isMinting = false
                 }
-                
+
                 // Refresh the balance in WalletManager
                 walletManager.refreshBalance()
             } catch {
