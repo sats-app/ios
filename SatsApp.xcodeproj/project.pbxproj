@@ -25,6 +25,7 @@
 		634D2E302E8C875800217DB3 /* Proof+Schema.swift in Sources */ = {isa = PBXBuildFile; fileRef = 634D2E1E2E8C875800217DB3 /* Proof+Schema.swift */; };
 		634D2E312E8C875800217DB3 /* Proof.swift in Sources */ = {isa = PBXBuildFile; fileRef = 634D2E1D2E8C875800217DB3 /* Proof.swift */; };
 		634D2E322E8C875800217DB3 /* MintQuote.swift in Sources */ = {isa = PBXBuildFile; fileRef = 634D2E1A2E8C875800217DB3 /* MintQuote.swift */; };
+		634D2E382E8D9D7900217DB3 /* PasswordlessAuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 634D2E372E8D9D7900217DB3 /* PasswordlessAuthView.swift */; };
 		A12345678901ABCE /* Amplify in Frameworks */ = {isa = PBXBuildFile; productRef = A12345678901ABCD /* Amplify */; };
 		A12345678901ABCG /* AWSCognitoAuthPlugin in Frameworks */ = {isa = PBXBuildFile; productRef = A12345678901ABCH /* AWSCognitoAuthPlugin */; };
 		B12345678901ABCD /* SatsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABCC /* SatsApp.swift */; };
@@ -38,11 +39,6 @@
 		B12345678901ABE5 /* DepositSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABE4 /* DepositSheetView.swift */; };
 		B12345678901ABE7 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABE6 /* Theme.swift */; };
 		B12345678901ABE9 /* WalletLoadingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABE8 /* WalletLoadingView.swift */; };
-		B12345678901ABEC /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABEA /* AuthManager.swift */; };
-		B12345678901ABEF /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABF0 /* AuthView.swift */; };
-		B12345678901ABF1 /* SignUpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABF2 /* SignUpView.swift */; };
-		B12345678901ABF3 /* ConfirmEmailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABF4 /* ConfirmEmailView.swift */; };
-		B12345678901ABF5 /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABF6 /* SignInView.swift */; };
 		B12345678901ABFB /* AmplifyWalletDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABF7 /* AmplifyWalletDatabase.swift */; };
 		B12345678901ABFC /* LocalWalletCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABF8 /* LocalWalletCache.swift */; };
 		B12345678901ABFD /* UITransaction.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABF9 /* UITransaction.swift */; };
@@ -66,6 +62,7 @@
 		634D2E212E8C875800217DB3 /* Transaction+Schema.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Transaction+Schema.swift"; sourceTree = "<group>"; };
 		634D2E222E8C875800217DB3 /* WalletMetadata.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalletMetadata.swift; sourceTree = "<group>"; };
 		634D2E232E8C875800217DB3 /* WalletMetadata+Schema.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WalletMetadata+Schema.swift"; sourceTree = "<group>"; };
+		634D2E372E8D9D7900217DB3 /* PasswordlessAuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasswordlessAuthView.swift; sourceTree = "<group>"; };
 		B12345678901ABC9 /* SatsApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SatsApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B12345678901ABCC /* SatsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SatsApp.swift; sourceTree = "<group>"; };
 		B12345678901ABCE /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -78,11 +75,6 @@
 		B12345678901ABE4 /* DepositSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DepositSheetView.swift; sourceTree = "<group>"; };
 		B12345678901ABE6 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		B12345678901ABE8 /* WalletLoadingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalletLoadingView.swift; sourceTree = "<group>"; };
-		B12345678901ABEA /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
-		B12345678901ABF0 /* AuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthView.swift; sourceTree = "<group>"; };
-		B12345678901ABF2 /* SignUpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpView.swift; sourceTree = "<group>"; };
-		B12345678901ABF4 /* ConfirmEmailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfirmEmailView.swift; sourceTree = "<group>"; };
-		B12345678901ABF6 /* SignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInView.swift; sourceTree = "<group>"; };
 		B12345678901ABF7 /* AmplifyWalletDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AmplifyWalletDatabase.swift; sourceTree = "<group>"; };
 		B12345678901ABF8 /* LocalWalletCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalWalletCache.swift; sourceTree = "<group>"; };
 		B12345678901ABF9 /* UITransaction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UITransaction.swift; sourceTree = "<group>"; };
@@ -175,7 +167,6 @@
 			isa = PBXGroup;
 			children = (
 				B12345678901ABE2 /* WalletManager.swift */,
-				B12345678901ABEA /* AuthManager.swift */,
 				B12345678901ABF7 /* AmplifyWalletDatabase.swift */,
 				B12345678901ABF8 /* LocalWalletCache.swift */,
 				B12345678901ABF9 /* UITransaction.swift */,
@@ -193,11 +184,8 @@
 				B12345678901ABD2 /* ActivityView.swift */,
 				B12345678901ABE0 /* BalanceView.swift */,
 				B12345678901ABE4 /* DepositSheetView.swift */,
+				634D2E372E8D9D7900217DB3 /* PasswordlessAuthView.swift */,
 				B12345678901ABE8 /* WalletLoadingView.swift */,
-				B12345678901ABF0 /* AuthView.swift */,
-				B12345678901ABF2 /* SignUpView.swift */,
-				B12345678901ABF6 /* SignInView.swift */,
-				B12345678901ABF4 /* ConfirmEmailView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -300,14 +288,10 @@
 				B12345678901ABE1 /* BalanceView.swift in Sources */,
 				B12345678901ABE3 /* WalletManager.swift in Sources */,
 				B12345678901ABE5 /* DepositSheetView.swift in Sources */,
-				B12345678901ABEC /* AuthManager.swift in Sources */,
-				B12345678901ABEF /* AuthView.swift in Sources */,
-				B12345678901ABF1 /* SignUpView.swift in Sources */,
-				B12345678901ABF5 /* SignInView.swift in Sources */,
-				B12345678901ABF3 /* ConfirmEmailView.swift in Sources */,
 				B12345678901ABE7 /* Theme.swift in Sources */,
 				B12345678901ABE9 /* WalletLoadingView.swift in Sources */,
 				B12345678901ABCD /* SatsApp.swift in Sources */,
+				634D2E382E8D9D7900217DB3 /* PasswordlessAuthView.swift in Sources */,
 				B12345678901ABFB /* AmplifyWalletDatabase.swift in Sources */,
 				634D2E252E8C875800217DB3 /* MeltQuoteState.swift in Sources */,
 				634D2E262E8C875800217DB3 /* WalletMetadata.swift in Sources */,

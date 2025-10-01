@@ -150,6 +150,10 @@ run-on device:
     xcrun simctl launch "$SIMULATOR_ID" {{bundle_id}}
     echo "✅ App launched on {{device}}"
 
+# Stream app logs in real-time
+logs:
+    /usr/bin/log stream --level debug --predicate 'subsystem == "{{bundle_id}}"' --style compact
+
 # Quick rebuild and run (skips some checks for faster iteration)
 quick:
     #!/bin/bash
@@ -242,4 +246,12 @@ reset: clean
     xcrun simctl shutdown all
     xcrun simctl erase all
     @echo "✅ Reset complete"
+
+# Deploy backend sandbox and sync amplify_outputs.json
+backend-deploy:
+    #!/bin/bash
+    set -euo pipefail
+    echo "🚀 Deploying backend sandbox..."
+    cd ../backend && npx ampx sandbox --profile sats-app --outputs-out-dir ../ios/SatsApp/Resources/
+    echo "✅ Backend deployed and outputs synced"
 

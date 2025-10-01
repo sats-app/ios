@@ -5,7 +5,7 @@ import AWSCognitoAuthPlugin
 @main
 struct SatsApp: App {
     @StateObject private var walletManager = WalletManager()
-    @StateObject private var authManager = AuthManager()
+    @State private var isAuthenticated = false
 
     init() {
         configureAmplify()
@@ -27,17 +27,67 @@ struct SatsApp: App {
 
     var body: some Scene {
         WindowGroup {
-            if authManager.isAuthenticated {
-                ContentView()
-                    .environmentObject(walletManager)
-                    .environmentObject(authManager)
-                    .onAppear {
-                        walletManager.setAuthManager(authManager)
-                    }
-            } else {
-                AuthView()
-                    .environmentObject(authManager)
+            Group {
+                if isAuthenticated {
+                    ContentView()
+                        .environmentObject(walletManager)
+                        .onAppear {
+                            Task {
+                                await walletManager.initializeWallet()
+                            }
+                        }
+                        .onChange(of: walletManager.initializationError) { error in
+                            // If wallet fails due to authentication, sign out the user
+                            if let errorMessage = error, errorMessage.contains("not authenticated") {
+                                Task {
+                                    await signOut()
+                                }
+                            }
+                        }
+                } else {
+                    PasswordlessAuthView()
+                }
             }
+            .task {
+                await checkAuthStatus()
+
+                // Listen for auth state changes
+                _ = Amplify.Hub.listen(to: .auth) { payload in
+                    switch payload.eventName {
+                    case HubPayload.EventName.Auth.signedIn:
+                        Task { @MainActor in
+                            isAuthenticated = true
+                        }
+                    case HubPayload.EventName.Auth.signedOut:
+                        Task { @MainActor in
+                            isAuthenticated = false
+                        }
+                    default:
+                        break
+                    }
+                }
+            }
+        }
+    }
+
+    @MainActor
+    private func checkAuthStatus() async {
+        do {
+            let session = try await Amplify.Auth.fetchAuthSession()
+            isAuthenticated = session.isSignedIn
+        } catch {
+            isAuthenticated = false
+            AppLogger.ui.debug("Not authenticated: \(error.localizedDescription)")
+        }
+    }
+
+    @MainActor
+    private func signOut() async {
+        do {
+            try await Amplify.Auth.signOut()
+            isAuthenticated = false
+        } catch {
+            AppLogger.ui.error("Sign out failed: \(error.localizedDescription)")
         }
     }
 }

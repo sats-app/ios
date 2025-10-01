@@ -7,12 +7,10 @@ final class AmplifyWalletDatabase: WalletDatabase, @unchecked Sendable {
     private let logger = AppLogger.wallet
     private let localCache: LocalWalletCache
     private let walletEncryption: WalletEncryption
-    private weak var authManager: AuthManager?
 
-    init(walletEncryption: WalletEncryption, authManager: AuthManager?) {
+    init(walletEncryption: WalletEncryption) {
         self.localCache = LocalWalletCache()
         self.walletEncryption = walletEncryption
-        self.authManager = authManager
     }
 
     // MARK: - WalletDatabase Protocol Implementation
@@ -89,7 +87,7 @@ final class AmplifyWalletDatabase: WalletDatabase, @unchecked Sendable {
                 quoteId: quote.id,
                 encryptedQuote: encryptedData,
                 state: mapMintQuoteState(quote.state),
-                owner: await getCurrentUserId()
+                owner: try await getCurrentUserId()
             )
 
             let savedQuote = try await Amplify.DataStore.save(amplifyQuote)
@@ -129,7 +127,7 @@ final class AmplifyWalletDatabase: WalletDatabase, @unchecked Sendable {
         logger.debug("Getting all mint quotes")
 
         do {
-            let userId = await getCurrentUserId()
+            let userId = try await getCurrentUserId()
             let predicate = MintQuote.keys.owner.eq(userId)
             let amplifyQuotes = try await Amplify.DataStore.query(MintQuote.self, where: predicate)
 
@@ -190,7 +188,7 @@ final class AmplifyWalletDatabase: WalletDatabase, @unchecked Sendable {
                 quoteId: quote.id,
                 encryptedQuote: encryptedData,
                 state: mapMeltQuoteState(quote.state),
-                owner: await getCurrentUserId()
+                owner: try await getCurrentUserId()
             )
 
             let savedQuote = try await Amplify.DataStore.save(amplifyQuote)
@@ -230,7 +228,7 @@ final class AmplifyWalletDatabase: WalletDatabase, @unchecked Sendable {
         logger.debug("Getting all melt quotes")
 
         do {
-            let userId = await getCurrentUserId()
+            let userId = try await getCurrentUserId()
             let predicate = MeltQuote.keys.owner.eq(userId)
             let amplifyQuotes = try await Amplify.DataStore.query(MeltQuote.self, where: predicate)
 
@@ -394,15 +392,15 @@ final class AmplifyWalletDatabase: WalletDatabase, @unchecked Sendable {
 // MARK: - Helper Methods
 private extension AmplifyWalletDatabase {
 
-    func getCurrentUserId() async -> String {
+    func getCurrentUserId() async throws -> String {
         // Get the authenticated user ID from AWS Cognito
         do {
             // Get current authenticated user
             let user = try await Amplify.Auth.getCurrentUser()
             return user.userId
         } catch {
-            logger.warning("No authenticated user, using fallback ID")
-            return "anonymous_user"
+            logger.error("No authenticated user found")
+            throw DatabaseError.userNotAuthenticated
         }
     }
 

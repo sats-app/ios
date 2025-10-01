@@ -36,17 +36,10 @@ class WalletManager: ObservableObject {
     private var database: AmplifyWalletDatabase?
     private var walletEncryption: WalletEncryption?
 
-    // Dependency injection
-    private weak var authManager: AuthManager?
-    
     init() {
         AppLogger.wallet.info("WalletManager: Initializing...")
         setupWalletDirectory()
-        AppLogger.wallet.info("WalletManager: Starting wallet initialization task...")
-        Task { @MainActor in
-            await initializeWallet()
-        }
-        AppLogger.wallet.info("WalletManager: Init complete, task started")
+        AppLogger.wallet.info("WalletManager: Init complete, ready for wallet initialization")
     }
     
     private func setupWalletDirectory() {
@@ -66,12 +59,12 @@ class WalletManager: ObservableObject {
     }
     
     @MainActor
-    private func initializeWallet() async {
+    func initializeWallet() async {
         AppLogger.wallet.info("Starting wallet initialization...")
-        
+
         self.isLoading = true
         self.initializationError = nil
-        
+
         do {
             try await performWalletInitialization()
         } catch {
@@ -80,8 +73,20 @@ class WalletManager: ObservableObject {
             self.isLoading = false
         }
     }
-    
+
     private func performWalletInitialization() async throws {
+        // Check authentication first using Amplify Auth
+        do {
+            let session = try await Amplify.Auth.fetchAuthSession()
+            guard session.isSignedIn else {
+                AppLogger.wallet.error("User is not authenticated - cannot initialize wallet")
+                throw WalletError.userNotAuthenticated
+            }
+        } catch {
+            AppLogger.wallet.error("Failed to check authentication status: \(error.localizedDescription)")
+            throw WalletError.userNotAuthenticated
+        }
+
         AppLogger.wallet.info("Retrieving mnemonic...")
         let mnemonic = getMnemonicFromKeychain() ?? generateAndStoreMnemonic()
         AppLogger.wallet.info("Mnemonic retrieved/generated: \(!mnemonic.isEmpty)")
@@ -101,10 +106,7 @@ class WalletManager: ObservableObject {
         self.walletEncryption = encryption
 
         AppLogger.wallet.info("Creating Amplify wallet database")
-        let amplifyDatabase = AmplifyWalletDatabase(
-            walletEncryption: encryption,
-            authManager: self.authManager
-        )
+        let amplifyDatabase = AmplifyWalletDatabase(walletEncryption: encryption)
         self.database = amplifyDatabase
 
         AppLogger.wallet.info("Initializing MultiMintWallet")
@@ -138,11 +140,6 @@ class WalletManager: ObservableObject {
         }
     }
 
-    // Set the auth manager for dependency injection
-    func setAuthManager(_ authManager: AuthManager) {
-        self.authManager = authManager
-    }
-    
     private func getMnemonicFromKeychain() -> String? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
@@ -526,13 +523,16 @@ class WalletManager: ObservableObject {
 enum WalletError: LocalizedError {
     case walletNotInitialized
     case failedToGenerateMnemonic
-    
+    case userNotAuthenticated
+
     var errorDescription: String? {
         switch self {
         case .walletNotInitialized:
             return "Wallet is not initialized"
         case .failedToGenerateMnemonic:
             return "Failed to generate or retrieve wallet mnemonic"
+        case .userNotAuthenticated:
+            return "User is not authenticated"
         }
     }
 }
