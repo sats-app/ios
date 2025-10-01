@@ -15,7 +15,7 @@ class WalletManager: ObservableObject {
     @Published var initializationError: String?
     @Published var isLoading = true
     @Published var balance: UInt64 = 0
-    
+
     var formattedBalance: String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
@@ -23,39 +23,13 @@ class WalletManager: ObservableObject {
         formatter.usesGroupingSeparator = true
         return (formatter.string(from: NSNumber(value: balance)) ?? "0") + " sat"
     }
-    
-    private var documentsURL: URL {
-        let urls = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
-        return urls[0]
-    }
-
-    private var walletDataURL: URL {
-        return documentsURL.appendingPathComponent("wallet_data", isDirectory: true)
-    }
 
     private var database: AmplifyWalletDatabase?
     private var walletEncryption: WalletEncryption?
 
     init() {
         AppLogger.wallet.info("WalletManager: Initializing...")
-        setupWalletDirectory()
         AppLogger.wallet.info("WalletManager: Init complete, ready for wallet initialization")
-    }
-    
-    private func setupWalletDirectory() {
-        do {
-            try FileManager.default.createDirectory(at: walletDataURL, withIntermediateDirectories: true, attributes: nil)
-            
-            var resourceValues = URLResourceValues()
-            resourceValues.isExcludedFromBackup = false
-            var url = walletDataURL
-            try url.setResourceValues(resourceValues)
-            
-            AppLogger.wallet.info("Wallet data directory configured at: \(self.walletDataURL.path)")
-            AppLogger.wallet.info("iCloud backup enabled for wallet data")
-        } catch {
-            AppLogger.wallet.error("Failed to setup wallet directory: \(error.localizedDescription)")
-        }
     }
     
     @MainActor

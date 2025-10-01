@@ -4,7 +4,7 @@ struct AnimatedBalanceText: View {
     let balance: String
     @State private var animateBalance = false
     @State private var previousBalance = ""
-    
+
     var body: some View {
         Text(balance)
             .font(.headline)
@@ -18,7 +18,7 @@ struct AnimatedBalanceText: View {
                     withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
                         animateBalance = true
                     }
-                    
+
                     // Reset animation after a short delay
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
                         withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
@@ -28,26 +28,6 @@ struct AnimatedBalanceText: View {
                 }
                 previousBalance = newBalance
             }
-    }
-}
-
-struct BalanceView: View {
-    let balance: String
-    
-    var body: some View {
-        NavigationView {
-            EmptyView()
-                .navigationTitle("")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .principal) {
-                        Text(balance)
-                            .font(.headline)
-                            .fontWeight(.medium)
-                            .foregroundColor(Color.orange)
-                    }
-                }
-        }
     }
 }
 
