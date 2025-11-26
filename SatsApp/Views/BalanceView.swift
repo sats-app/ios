@@ -118,15 +118,15 @@ struct AdaptiveSheetModifier<SheetContent: View>: ViewModifier {
 
 struct MintsDrawerView: View {
     @EnvironmentObject var walletManager: WalletManager
+    @Environment(\.dismiss) private var dismiss
     @State private var mints: [UIMintInfo] = []
     @State private var isLoading = true
-    @State private var showingAddMint = false
-    @State private var newMintUrl = ""
     @State private var showingError = false
     @State private var errorMessage = ""
+    @State private var refreshTrigger = false
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Group {
                 if isLoading {
                     ProgressView()
@@ -164,21 +164,24 @@ struct MintsDrawerView: View {
             .navigationTitle("Mints")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .navigationBarLeading) {
                     Button(action: {
-                        showingAddMint = true
+                        dismiss()
                     }) {
+                        Image(systemName: "xmark")
+                            .foregroundColor(.orange)
+                    }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    NavigationLink {
+                        MintBrowserView(mode: .addMint, onMintAdded: { _ in
+                            refreshTrigger.toggle()
+                        })
+                    } label: {
                         Image(systemName: "plus")
                             .foregroundColor(.orange)
                     }
                 }
-            }
-            .sheet(isPresented: $showingAddMint) {
-                AddMintView(onAdd: { url in
-                    Task {
-                        await addMint(url: url)
-                    }
-                })
             }
             .alert("Error", isPresented: $showingError) {
                 Button("OK") {}
@@ -188,6 +191,9 @@ struct MintsDrawerView: View {
         }
         .task {
             await loadMints()
+        }
+        .onChange(of: refreshTrigger) { _ in
+            Task { await loadMints() }
         }
     }
 
@@ -224,22 +230,6 @@ struct MintsDrawerView: View {
         }
     }
 
-    private func addMint(url: String) async {
-        do {
-            try await walletManager.addMint(mintUrl: url)
-            await loadMints()
-            await MainActor.run {
-                showingAddMint = false
-                newMintUrl = ""
-            }
-        } catch {
-            await MainActor.run {
-                errorMessage = "Failed to add mint: \(error.localizedDescription)"
-                showingError = true
-            }
-        }
-    }
-
     private func deleteMint(at offsets: IndexSet) {
         guard let index = offsets.first else { return }
         let mintUrl = mints[index].url
@@ -255,54 +245,6 @@ struct MintsDrawerView: View {
                 }
             }
         }
-    }
-}
-
-struct AddMintView: View {
-    @Environment(\.dismiss) private var dismiss
-    @State private var mintUrl: String = ""
-    let onAdd: (String) -> Void
-
-    var body: some View {
-        NavigationView {
-            VStack(spacing: 20) {
-                TextField("Mint URL", text: $mintUrl)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .autocapitalization(.none)
-                    .keyboardType(.URL)
-                    .padding(.horizontal)
-
-                Button("Add Mint") {
-                    onAdd(mintUrl)
-                    dismiss()
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: 50)
-                .background(isValidUrl ? Color.orange : Color.gray)
-                .foregroundColor(.white)
-                .cornerRadius(12)
-                .font(.headline)
-                .disabled(!isValidUrl)
-                .padding(.horizontal)
-
-                Spacer()
-            }
-            .padding(.top)
-            .navigationTitle("Add Mint")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-            }
-        }
-    }
-
-    private var isValidUrl: Bool {
-        guard let url = URL(string: mintUrl) else { return false }
-        return url.scheme == "https" || url.scheme == "http"
     }
 }
 

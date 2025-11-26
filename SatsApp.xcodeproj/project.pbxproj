@@ -8,8 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		47F4DEDFF443F4806F209AA0 /* AppLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3729603695357C070353FFFC /* AppLogger.swift */; };
+		57FEE5D29930D25747C39372 /* MintDirectory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A4297BFD328F570E47F89FD /* MintDirectory.swift */; };
 		6339661E2E859DF1001FC57B /* CashuDevKit in Frameworks */ = {isa = PBXBuildFile; productRef = 6339661D2E859DF1001FC57B /* CashuDevKit */; };
-		634D2E152E8C7EC500217DB3 /* CashuDevKit in Frameworks */ = {isa = PBXBuildFile; productRef = 634D2E142E8C7EC500217DB3 /* CashuDevKit */; };
 		B12345678901ABCD /* SatsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABCC /* SatsApp.swift */; };
 		B12345678901ABCF /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABCE /* ContentView.swift */; };
 		B12345678901ABD1 /* TransactView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABD0 /* TransactView.swift */; };
@@ -24,11 +24,11 @@
 		B12345678901ABFD /* UITransaction.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABF9 /* UITransaction.swift */; };
 		C12345678901ABC6 /* StorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C12345678901ABC7 /* StorageManager.swift */; };
 		C12345678901ABC8 /* MintSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C12345678901ABC9 /* MintSelectionView.swift */; };
-
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		3729603695357C070353FFFC /* AppLogger.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppLogger.swift; sourceTree = "<group>"; };
+		4A4297BFD328F570E47F89FD /* MintDirectory.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MintDirectory.swift; sourceTree = "<group>"; };
 		B12345678901ABC9 /* SatsApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SatsApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B12345678901ABCC /* SatsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SatsApp.swift; sourceTree = "<group>"; };
 		B12345678901ABCE /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -45,7 +45,6 @@
 		C12345678901ABC7 /* StorageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageManager.swift; sourceTree = "<group>"; };
 		C12345678901ABC9 /* MintSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MintSelectionView.swift; sourceTree = "<group>"; };
 		C12345678901ABCA /* SatsApp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SatsApp.entitlements; sourceTree = "<group>"; };
-
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -113,6 +112,7 @@
 				B12345678901ABF9 /* UITransaction.swift */,
 				3729603695357C070353FFFC /* AppLogger.swift */,
 				C12345678901ABC7 /* StorageManager.swift */,
+				4A4297BFD328F570E47F89FD /* MintDirectory.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -233,6 +233,7 @@
 				47F4DEDFF443F4806F209AA0 /* AppLogger.swift in Sources */,
 				C12345678901ABC6 /* StorageManager.swift in Sources */,
 				C12345678901ABC8 /* MintSelectionView.swift in Sources */,
+				57FEE5D29930D25747C39372 /* MintDirectory.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
