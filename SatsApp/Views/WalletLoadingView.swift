@@ -15,7 +15,7 @@ struct WalletLoadingView: View {
                         .font(.headline)
                         .foregroundColor(.primary)
                     
-                    Text("Connecting to \(walletManager.defaultMintURL)")
+                    Text("Setting up wallet...")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }

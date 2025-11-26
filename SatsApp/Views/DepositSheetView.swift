@@ -1,3 +1,4 @@
+import CashuDevKit
 import CoreImage
 import CoreImage.CIFilterBuiltins
 import SwiftUI
@@ -12,7 +13,7 @@ struct DepositSheetView: View {
     @State private var isLoadingMints = true
     @State private var isLoading = false
     @State private var depositRequest: String?
-    @State private var mintQuoteStatus: String?
+    @State private var mintQuoteStatus: QuoteState?
     @State private var quoteId: String?
     @State private var isPolling = false
     @State private var isMinting = false
@@ -168,9 +169,9 @@ struct DepositSheetView: View {
                             if let status = mintQuoteStatus {
                                 HStack {
                                     Circle()
-                                        .fill(status == "Paid" ? Color.green : (status == "Pending" ? Color.orange : Color.red))
+                                        .fill(statusColor(for: status))
                                         .frame(width: 8, height: 8)
-                                    Text("Status: \(status)")
+                                    Text("Status: \(status.displayString)")
                                         .font(.subheadline)
                                         .foregroundColor(.primary)
                                 }
@@ -300,14 +301,14 @@ struct DepositSheetView: View {
 
         Task {
             do {
-                let (request, status, id) = try await walletManager.generateMintQuote(
+                let quote = try await walletManager.generateMintQuote(
                     mintUrl: selectedMintUrl,
                     amount: amountValue)
 
                 await MainActor.run {
-                    self.depositRequest = request
-                    self.mintQuoteStatus = status
-                    self.quoteId = id
+                    self.depositRequest = quote.request
+                    self.mintQuoteStatus = quote.state
+                    self.quoteId = quote.id
                     self.isLoading = false
 
                     // Start polling for payment status
@@ -374,12 +375,12 @@ struct DepositSheetView: View {
         }
 
         do {
-            let status = try await walletManager.checkMintQuoteStatus(mintUrl: selectedMintUrl, quoteId: quoteId)
+            let state = try await walletManager.checkMintQuoteStatus(mintUrl: selectedMintUrl, quoteId: quoteId)
 
             await MainActor.run {
-                self.mintQuoteStatus = status
+                self.mintQuoteStatus = state
 
-                if status == "Paid" {
+                if state == .paid {
                     stopPolling()
                     performMinting(quoteId: quoteId)
                 }
@@ -417,6 +418,25 @@ struct DepositSheetView: View {
                     showError("Failed to mint tokens: \(error.localizedDescription)")
                 }
             }
+        }
+    }
+
+    private func statusColor(for state: QuoteState) -> Color {
+        switch state {
+        case .paid: return .green
+        case .pending, .unpaid: return .orange
+        case .issued: return .blue
+        }
+    }
+}
+
+extension QuoteState {
+    var displayString: String {
+        switch self {
+        case .unpaid: return "Unpaid"
+        case .paid: return "Paid"
+        case .pending: return "Pending"
+        case .issued: return "Issued"
         }
     }
 }

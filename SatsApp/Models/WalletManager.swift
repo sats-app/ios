@@ -2,8 +2,6 @@ import Foundation
 import CashuDevKit
 
 class WalletManager: ObservableObject {
-    let defaultMintURL = "https://fake.thesimplekid.dev"
-
     @Published var wallet: MultiMintWallet?
     @Published var isInitialized = false
     @Published var needsMintSelection = false
@@ -255,7 +253,7 @@ class WalletManager: ObservableObject {
 
     // MARK: - Mint Quote
 
-    func generateMintQuote(mintUrl: String, amount: UInt64) async throws -> (String, String, String) {
+    func generateMintQuote(mintUrl: String, amount: UInt64) async throws -> (request: String, state: QuoteState, id: String) {
         guard let wallet = self.wallet else {
             AppLogger.network.error("Wallet not available")
             throw WalletError.walletNotInitialized
@@ -265,24 +263,24 @@ class WalletManager: ObservableObject {
             let mint = MintUrl(url: mintUrl)
             let amountObj = Amount(value: amount)
             let mintQuote = try await wallet.mintQuote(mintUrl: mint, amount: amountObj, description: nil)
-            let state = mintQuote.state
-            let statusString = switch state {
-            case .unpaid: "Unpaid"
-            case .paid: "Paid"
-            case .pending: "Pending"
-            case .issued: "Issued"
-            }
-            return (mintQuote.request, statusString, mintQuote.id)
+            AppLogger.network.info("Generated mint quote \(mintQuote.id) with state: \(String(describing: mintQuote.state))")
+            return (mintQuote.request, mintQuote.state, mintQuote.id)
         } catch {
             AppLogger.network.error("Failed to generate mint quote: \(error.localizedDescription)")
             throw error
         }
     }
 
-    func checkMintQuoteStatus(mintUrl: String, quoteId: String) async throws -> String {
-        // Note: CDK 0.14.x API doesn't have a direct quote status check method
-        // The deposit flow will poll this and attempt to mint when ready
-        return "Pending"
+    func checkMintQuoteStatus(mintUrl: String, quoteId: String) async throws -> QuoteState {
+        guard let wallet = self.wallet else {
+            AppLogger.network.error("Wallet not available")
+            throw WalletError.walletNotInitialized
+        }
+
+        let mint = MintUrl(url: mintUrl)
+        let quote = try await wallet.checkMintQuote(mintUrl: mint, quoteId: quoteId)
+        AppLogger.network.debug("Mint quote \(quoteId) status: \(String(describing: quote.state))")
+        return quote.state
     }
 
     func mintTokens(mintUrl: String, quoteId: String) async throws -> UInt64 {
