@@ -158,195 +158,220 @@ struct TransactSheetView: View {
     let amount: String
     let mode: TransactMode
     @EnvironmentObject var walletManager: WalletManager
-    @State private var selectedPaymentMethod: PaymentMethod = .link
     @State private var selectedMintUrl: String = ""
     @State private var availableMints: [String] = []
     @State private var isLoadingMints = true
     @State private var memo: String = ""
     @State private var isViewableByRecipient: Bool = false
     @State private var isLoading: Bool = false
-    @State private var showSuccess: Bool = false
+    @State private var showQRResult: Bool = false
+    @State private var generatedContent: String = ""
     @State private var showingError = false
     @State private var errorMessage = ""
     @Environment(\.presentationMode) var presentationMode
     
-    enum PaymentMethod: String, CaseIterable {
-        case link = "Link"
-        case username = "Username"
-        case qrCode = "QR Code"
-        case nfc = "NFC"
-        
-        var iconName: String {
-            switch self {
-            case .link: return "link"
-            case .username: return "at"
-            case .qrCode: return "qrcode"
-            case .nfc: return "wave.3.right.circle"
-            }
-        }
-    }
-    
     var body: some View {
         VStack(spacing: 0) {
-            if showSuccess {
-                // Success state
-                VStack(spacing: 20) {
-                    ZStack {
-                        Circle()
-                            .fill(Color.green)
-                            .frame(width: 60, height: 60)
-                        
-                        Image(systemName: "checkmark")
-                            .font(.title)
-                            .foregroundColor(.white)
-                    }
-                    
-                    Text(mode.successMessage)
-                        .font(.title2)
-                        .bold()
-                        .foregroundColor(.green)
-                    
-                    Button("Done") {
-                        presentationMode.wrappedValue.dismiss()
+            if showQRResult {
+                // QR Result view
+                qrResultView
+            } else {
+                // Input form
+                inputFormView
+            }
+        }
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
+        .alert("Error", isPresented: $showingError) {
+            Button("OK") {}
+        } message: {
+            Text(errorMessage)
+        }
+        .task {
+            await loadMints()
+        }
+    }
+
+    private var qrResultView: some View {
+        VStack(spacing: 20) {
+            // Header
+            VStack(spacing: 16) {
+                ZStack {
+                    Circle()
+                        .fill(Color.orange)
+                        .frame(width: 60, height: 60)
+
+                    Image(systemName: mode.iconName)
+                        .font(.title)
+                        .foregroundColor(Color.white)
+                }
+
+                Text("\(amount) sat")
+                    .font(.title2)
+                    .bold()
+                    .foregroundColor(Color.orange)
+            }
+            .padding(.top, 20)
+
+            // QR Code
+            QRCodeView(text: generatedContent)
+                .frame(width: 200, height: 200)
+
+            // Truncated content text
+            Text(truncatedContent(generatedContent))
+                .font(.system(.caption, design: .monospaced))
+                .foregroundColor(.secondary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(Color.gray.opacity(0.1))
+                .cornerRadius(8)
+
+            // Action buttons
+            HStack(spacing: 16) {
+                ShareLink(item: generatedContent) {
+                    HStack {
+                        Image(systemName: "square.and.arrow.up")
+                        Text("Share")
                     }
                     .frame(maxWidth: .infinity)
-                    .frame(height: 50)
-                    .background(Color.green)
+                    .frame(height: 44)
+                    .background(Color.orange)
                     .foregroundColor(.white)
-                    .cornerRadius(12)
-                    .font(.headline)
+                    .cornerRadius(8)
+                    .font(.subheadline.weight(.medium))
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 40)
-            } else {
-                // Header section
-                VStack(spacing: 20) {
-                VStack(spacing: 16) {
-                    ZStack {
-                        Circle()
-                            .fill(Color.orange)
-                            .frame(width: 60, height: 60)
 
-                        Image(systemName: mode.iconName)
-                            .font(.title)
-                            .foregroundColor(Color.white)
+                Button(action: {
+                    // NFC placeholder - not implemented
+                }) {
+                    HStack {
+                        Image(systemName: "wave.3.right.circle")
+                        Text("NFC")
                     }
-
-                    Text("\(amount) sat")
-                        .font(.title2)
-                        .bold()
-                        .foregroundColor(Color.orange)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .background(Color.gray.opacity(0.2))
+                    .foregroundColor(.gray)
+                    .cornerRadius(8)
+                    .font(.subheadline.weight(.medium))
                 }
-                .padding(.top, 20)
+                .disabled(true)
+            }
+            .padding(.horizontal, 20)
 
-                // Mint selector (only for pay mode)
-                if mode == .pay {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Select Mint")
-                            .font(.headline)
-                            .fontWeight(.medium)
-                            .foregroundColor(Color.orange)
+            Spacer()
 
-                        if isLoadingMints {
-                            ProgressView()
-                        } else if availableMints.isEmpty {
-                            Text("No mints available")
-                                .foregroundColor(.gray)
-                        } else {
-                            Picker("Mint", selection: $selectedMintUrl) {
-                                ForEach(availableMints, id: \.self) { mint in
-                                    Text(URL(string: mint)?.host ?? mint)
-                                        .tag(mint)
-                                }
-                            }
-                            .pickerStyle(MenuPickerStyle())
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.gray.opacity(0.2))
-                            .cornerRadius(8)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+            // Done button
+            Button("Done") {
+                presentationMode.wrappedValue.dismiss()
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 50)
+            .background(Color.orange)
+            .foregroundColor(.white)
+            .cornerRadius(12)
+            .font(.headline)
+            .padding(.horizontal, 20)
+            .padding(.bottom, 30)
+        }
+    }
+
+    private var inputFormView: some View {
+        VStack(spacing: 20) {
+            // Header section
+            VStack(spacing: 16) {
+                ZStack {
+                    Circle()
+                        .fill(Color.orange)
+                        .frame(width: 60, height: 60)
+
+                    Image(systemName: mode.iconName)
+                        .font(.title)
+                        .foregroundColor(Color.white)
                 }
-                
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Pay via")
+
+                Text("\(amount) sat")
+                    .font(.title2)
+                    .bold()
+                    .foregroundColor(Color.orange)
+            }
+            .padding(.top, 20)
+
+            // Mint selector (only for pay mode)
+            if mode == .pay {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Select Mint")
                         .font(.headline)
                         .fontWeight(.medium)
                         .foregroundColor(Color.orange)
-                    
-                    HStack(spacing: 0) {
-                        ForEach(PaymentMethod.allCases, id: \.self) { method in
-                            VStack(spacing: 8) {
-                                Button(action: {
-                                    selectedPaymentMethod = method
-                                }) {
-                                    Image(systemName: method.iconName)
-                                        .font(.title3)
-                                }
-                                .frame(width: 50, height: 50)
-                        .background(
-                            Circle()
-                                .fill(selectedPaymentMethod == method ? Color.orange : Color.gray.opacity(0.2))
-                        )
-                        .foregroundColor(selectedPaymentMethod == method ? .white : .black)
-                                
-                                Text(method.rawValue)
-                                    .font(.caption)
-                                    .foregroundColor(.gray)
+
+                    if isLoadingMints {
+                        ProgressView()
+                    } else if availableMints.isEmpty {
+                        Text("No mints available")
+                            .foregroundColor(.gray)
+                    } else {
+                        Picker("Mint", selection: $selectedMintUrl) {
+                            ForEach(availableMints, id: \.self) { mint in
+                                Text(URL(string: mint)?.host ?? mint)
+                                    .tag(mint)
                             }
-                            .frame(maxWidth: .infinity)
                         }
+                        .pickerStyle(MenuPickerStyle())
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.gray.opacity(0.2))
+                        .cornerRadius(8)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Memo")
-                        .font(.headline)
-                        .fontWeight(.medium)
-                        .foregroundColor(Color.orange)
-                    
-                    ZStack(alignment: .topLeading) {
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                            .background(RoundedRectangle(cornerRadius: 8).fill(Color.white))
-                            .frame(height: 80)
-                        
-                        if memo.isEmpty {
-                            Text("Add a note...")
-                                .foregroundColor(.gray)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 8)
-                        }
-                        
-                        TextField("", text: $memo)
+            }
+
+            // Memo field
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Memo")
+                    .font(.headline)
+                    .fontWeight(.medium)
+                    .foregroundColor(Color.orange)
+
+                ZStack(alignment: .topLeading) {
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                        .background(RoundedRectangle(cornerRadius: 8).fill(Color.white))
+                        .frame(height: 80)
+
+                    if memo.isEmpty {
+                        Text("Add a note...")
+                            .foregroundColor(.gray)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 8)
-                            .frame(height: 80, alignment: .topLeading)
                     }
+
+                    TextField("", text: $memo)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 8)
+                        .frame(height: 80, alignment: .topLeading)
                 }
-                
-                HStack {
-                    Button(action: {
-                        isViewableByRecipient.toggle()
-                    }) {
-                        Image(systemName: isViewableByRecipient ? "checkmark.square.fill" : "square")
-                            .foregroundColor(isViewableByRecipient ? Color.orange : .gray)
-                    }
-                    
-                    Text("Viewable by Recipient")
-                        .font(.subheadline)
-                        .foregroundColor(Color.orange)
-                    
-                    Spacer()
-                }
-                
             }
-            .padding(.horizontal, 20)
-            
+
+            // Viewable by recipient checkbox
+            HStack {
+                Button(action: {
+                    isViewableByRecipient.toggle()
+                }) {
+                    Image(systemName: isViewableByRecipient ? "checkmark.square.fill" : "square")
+                        .foregroundColor(isViewableByRecipient ? Color.orange : .gray)
+                }
+
+                Text("Viewable by Recipient")
+                    .font(.subheadline)
+                    .foregroundColor(Color.orange)
+
+                Spacer()
+            }
+
             Spacer()
-            
+
             // Bottom button section
             Button(action: {
                 handleTransaction()
@@ -367,20 +392,21 @@ struct TransactSheetView: View {
             .cornerRadius(12)
             .font(.headline)
             .disabled(isLoading)
-            .padding(.horizontal, 20)
             .padding(.bottom, 30)
-            }
         }
-        .navigationTitle("")
-        .navigationBarTitleDisplayMode(.inline)
-        .alert("Error", isPresented: $showingError) {
-            Button("OK") {}
-        } message: {
-            Text(errorMessage)
+        .padding(.horizontal, 20)
+    }
+
+    private func truncatedContent(_ content: String) -> String {
+        let maxLength = 30
+        if content.count <= maxLength {
+            return content
         }
-        .task {
-            await loadMints()
-        }
+        let prefixLength = 12
+        let suffixLength = 12
+        let prefix = String(content.prefix(prefixLength))
+        let suffix = String(content.suffix(suffixLength))
+        return "\(prefix)...\(suffix)"
     }
 
     private func loadMints() async {
@@ -404,11 +430,60 @@ struct TransactSheetView: View {
     private func handleTransaction() {
         isLoading = true
 
-        // TODO: Implement actual payment logic using walletManager
-        // For now, simulate network request with timer
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            isLoading = false
-            showSuccess = true
+        Task {
+            do {
+                switch mode {
+                case .pay:
+                    // Generate real Cashu token
+                    guard !selectedMintUrl.isEmpty else {
+                        await MainActor.run {
+                            showError("Please select a mint")
+                            isLoading = false
+                        }
+                        return
+                    }
+
+                    guard let amountValue = UInt64(amount), amountValue > 0 else {
+                        await MainActor.run {
+                            showError("Invalid amount")
+                            isLoading = false
+                        }
+                        return
+                    }
+
+                    let token = try await walletManager.send(
+                        mintUrl: selectedMintUrl,
+                        amount: amountValue,
+                        memo: memo.isEmpty ? nil : memo
+                    )
+
+                    await MainActor.run {
+                        generatedContent = token
+                        isLoading = false
+                        showQRResult = true
+                    }
+
+                    // Refresh balance after sending
+                    walletManager.refreshBalance()
+
+                case .request:
+                    // Placeholder for Cashu Payment Request (NUT-18)
+                    // Format: creq:placeholder:<amount>:<memo>
+                    let memoParam = memo.isEmpty ? "" : ":\(memo)"
+                    let placeholder = "creq:placeholder:\(amount)\(memoParam)"
+
+                    await MainActor.run {
+                        generatedContent = placeholder
+                        isLoading = false
+                        showQRResult = true
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    showError("Transaction failed: \(error.localizedDescription)")
+                    isLoading = false
+                }
+            }
         }
     }
 }

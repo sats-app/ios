@@ -22,6 +22,7 @@
 		B12345678901ABE7 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABE6 /* Theme.swift */; };
 		B12345678901ABE9 /* WalletLoadingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABE8 /* WalletLoadingView.swift */; };
 		B12345678901ABFD /* UITransaction.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABF9 /* UITransaction.swift */; };
+		BF401BB572094DBCF82E13F3 /* QRCodeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6616A52E16868EB7A0E55094 /* QRCodeView.swift */; };
 		C12345678901ABC6 /* StorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C12345678901ABC7 /* StorageManager.swift */; };
 		C12345678901ABC8 /* MintSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C12345678901ABC9 /* MintSelectionView.swift */; };
 /* End PBXBuildFile section */
@@ -29,6 +30,7 @@
 /* Begin PBXFileReference section */
 		3729603695357C070353FFFC /* AppLogger.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppLogger.swift; sourceTree = "<group>"; };
 		4A4297BFD328F570E47F89FD /* MintDirectory.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MintDirectory.swift; sourceTree = "<group>"; };
+		6616A52E16868EB7A0E55094 /* QRCodeView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = QRCodeView.swift; sourceTree = "<group>"; };
 		B12345678901ABC9 /* SatsApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SatsApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B12345678901ABCC /* SatsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SatsApp.swift; sourceTree = "<group>"; };
 		B12345678901ABCE /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -135,6 +137,7 @@
 			isa = PBXGroup;
 			children = (
 				B12345678901ABE6 /* Theme.swift */,
+				6616A52E16868EB7A0E55094 /* QRCodeView.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -234,6 +237,7 @@
 				C12345678901ABC6 /* StorageManager.swift in Sources */,
 				C12345678901ABC8 /* MintSelectionView.swift in Sources */,
 				57FEE5D29930D25747C39372 /* MintDirectory.swift in Sources */,
+				BF401BB572094DBCF82E13F3 /* QRCodeView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
