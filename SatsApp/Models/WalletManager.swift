@@ -1,20 +1,16 @@
 import Foundation
-import Security
 import CashuDevKit
-import Amplify
-import CryptoKit
-import CommonCrypto
 
 class WalletManager: ObservableObject {
-    private let keychainService = "app.paywithsats.keychain"
-    private let mnemonicKey = "wallet_mnemonic"
     let defaultMintURL = "https://fake.thesimplekid.dev"
-    
+
     @Published var wallet: MultiMintWallet?
     @Published var isInitialized = false
+    @Published var needsMintSelection = false
     @Published var initializationError: String?
     @Published var isLoading = true
     @Published var balance: UInt64 = 0
+    @Published var isUsingICloud: Bool = false
 
     var formattedBalance: String {
         let formatter = NumberFormatter()
@@ -24,14 +20,13 @@ class WalletManager: ObservableObject {
         return (formatter.string(from: NSNumber(value: balance)) ?? "0") + " sat"
     }
 
-    private var database: AmplifyWalletDatabase?
-    private var walletEncryption: WalletEncryption?
+    private var database: WalletSqliteDatabase?
 
     init() {
         AppLogger.wallet.info("WalletManager: Initializing...")
         AppLogger.wallet.info("WalletManager: Init complete, ready for wallet initialization")
     }
-    
+
     @MainActor
     func initializeWallet() async {
         AppLogger.wallet.info("Starting wallet initialization...")
@@ -49,64 +44,67 @@ class WalletManager: ObservableObject {
     }
 
     private func performWalletInitialization() async throws {
-        // Check authentication first using Amplify Auth
-        do {
-            let session = try await Amplify.Auth.fetchAuthSession()
-            guard session.isSignedIn else {
-                AppLogger.wallet.error("User is not authenticated - cannot initialize wallet")
-                throw WalletError.userNotAuthenticated
-            }
-        } catch {
-            AppLogger.wallet.error("Failed to check authentication status: \(error.localizedDescription)")
-            throw WalletError.userNotAuthenticated
+        // Initialize storage manager
+        let storageManager = StorageManager.shared
+        storageManager.initialize()
+
+        await MainActor.run {
+            self.isUsingICloud = storageManager.isUsingICloud
         }
 
-        AppLogger.wallet.info("Retrieving mnemonic...")
-        let mnemonic = getMnemonicFromKeychain() ?? generateAndStoreMnemonic()
-        AppLogger.wallet.info("Mnemonic retrieved/generated: \(!mnemonic.isEmpty)")
+        // Ensure wallet directory exists
+        try storageManager.ensureDirectoryExists()
 
-        // Check if mnemonic is valid
+        // Get or generate mnemonic
+        AppLogger.wallet.info("Retrieving mnemonic...")
+        let mnemonic: String
+        if storageManager.seedExists() {
+            mnemonic = try storageManager.loadMnemonic()
+            AppLogger.wallet.info("Loaded existing mnemonic from storage")
+        } else {
+            mnemonic = try generateAndStoreMnemonic(storageManager: storageManager)
+            AppLogger.wallet.info("Generated new mnemonic")
+        }
+
         guard !mnemonic.isEmpty else {
             AppLogger.wallet.error("Mnemonic is empty")
             throw WalletError.failedToGenerateMnemonic
         }
 
-        AppLogger.wallet.info("Creating wallet config")
-        let walletConfig = WalletConfig(targetProofCount: nil)
+        // Initialize WalletSqliteDatabase
+        let dbPath = storageManager.walletDirectory.appendingPathComponent("wallet.db").path
+        AppLogger.wallet.info("Initializing SQLite database at: \(dbPath)")
+        let sqliteDatabase = try WalletSqliteDatabase(filePath: dbPath)
+        self.database = sqliteDatabase
 
-        AppLogger.wallet.info("Initializing wallet encryption with mnemonic")
-        let encryption = WalletEncryption()
-        try await encryption.initializeEncryption(with: mnemonic)
-        self.walletEncryption = encryption
-
-        AppLogger.wallet.info("Creating Amplify wallet database")
-        let amplifyDatabase = AmplifyWalletDatabase(walletEncryption: encryption)
-        self.database = amplifyDatabase
-
+        // Create MultiMintWallet
         AppLogger.wallet.info("Initializing MultiMintWallet")
-        let newWallet = try await MultiMintWallet(
+        let newWallet = try MultiMintWallet(
             unit: CurrencyUnit.sat,
             mnemonic: mnemonic,
-            db: amplifyDatabase
+            db: sqliteDatabase
         )
 
-        // Add the default mint
-        AppLogger.wallet.info("Adding default mint: \(self.defaultMintURL)")
-        let mintUrl = MintUrl(url: defaultMintURL)
-        try await newWallet.addMint(mintUrl: mintUrl, targetProofCount: nil)
+        // Check if any mints are configured
+        let existingMints = await newWallet.getMintUrls()
+        let hasMints = !existingMints.isEmpty
 
-        AppLogger.wallet.info("Wallet created successfully, updating UI...")
+        AppLogger.wallet.info("Wallet created successfully, found \(existingMints.count) existing mints")
+
         await MainActor.run {
             self.wallet = newWallet
             self.isInitialized = true
+            self.needsMintSelection = !hasMints
             self.isLoading = false
-            AppLogger.wallet.info("✅ MultiMintWallet initialized successfully with default mint: \(self.defaultMintURL)")
+            AppLogger.wallet.info("MultiMintWallet initialized successfully")
 
-            // Load initial balance
-            self.refreshBalance()
+            if hasMints {
+                // Load initial balance
+                self.refreshBalance()
+            }
         }
     }
-    
+
     // Public method to retry initialization if it fails
     func retryInitialization() {
         Task { @MainActor in
@@ -114,72 +112,28 @@ class WalletManager: ObservableObject {
         }
     }
 
-    private func getMnemonicFromKeychain() -> String? {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: keychainService,
-            kSecAttrAccount as String: mnemonicKey,
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne
-        ]
-        
-        var item: CFTypeRef?
-        let status = SecItemCopyMatching(query as CFDictionary, &item)
-        
-        guard status == errSecSuccess else {
-            return nil
-        }
-        
-        guard let data = item as? Data,
-              let mnemonic = String(data: data, encoding: .utf8) else {
-            return nil
-        }
-        
-        return mnemonic
-    }
-    
-    private func generateAndStoreMnemonic() -> String {
-        let mnemonic = generateMnemonic()
-        storeMnemonicInKeychain(mnemonic)
-        return mnemonic
-    }
-    
-    private func generateMnemonic() -> String {
+    private func generateAndStoreMnemonic(storageManager: StorageManager) throws -> String {
         AppLogger.wallet.debug("Generating new mnemonic...")
         do {
             let mnemonic = try CashuDevKit.generateMnemonic()
-            AppLogger.wallet.debug("Mnemonic generated successfully, length: \(mnemonic.count)")
+            try storageManager.saveMnemonic(mnemonic)
+            AppLogger.wallet.debug("Mnemonic generated and stored successfully")
             return mnemonic
         } catch {
             AppLogger.wallet.error("Failed to generate mnemonic: \(error.localizedDescription)")
-            // Return a fallback empty mnemonic - this should trigger wallet initialization error
-            return ""
+            throw WalletError.failedToGenerateMnemonic
         }
     }
-    
-    private func storeMnemonicInKeychain(_ mnemonic: String) {
-        guard let data = mnemonic.data(using: .utf8) else {
-            AppLogger.wallet.error("Failed to convert mnemonic to data")
-            return
-        }
-        
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: keychainService,
-            kSecAttrAccount as String: mnemonicKey,
-            kSecValueData as String: data,
-            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly
-        ]
-        
-        let status = SecItemAdd(query as CFDictionary, nil)
-        
-        if status != errSecSuccess {
-            AppLogger.wallet.error("Failed to store mnemonic in keychain: \(status)")
-        } else {
-            AppLogger.wallet.debug("Mnemonic stored successfully in keychain")
-        }
+
+    // MARK: - Mint Selection Complete
+
+    /// Called when user completes mint selection during first launch
+    @MainActor
+    func completeMintSelection() {
+        needsMintSelection = false
+        refreshBalance()
     }
-    
+
     // MARK: - Transaction History
 
     func listTransactions(direction: TransactionDirection? = nil) async -> [UITransaction] {
@@ -189,14 +143,11 @@ class WalletManager: ObservableObject {
         }
 
         do {
-            // Get transactions from the wallet, optionally filtered by direction
             let cdkTransactions = try await wallet.listTransactions(direction: direction)
 
-            // Convert CDK transactions to UI transactions
             var transactions: [UITransaction] = []
 
             for cdkTransaction in cdkTransactions {
-                // Get the actual timestamp from the CDK transaction
                 let timestamp = cdkTransaction.timestamp
                 let transactionDate = Date(timeIntervalSince1970: TimeInterval(timestamp))
 
@@ -218,7 +169,7 @@ class WalletManager: ObservableObject {
             return []
         }
     }
-    
+
     // MARK: - Mint Management
 
     func addMint(mintUrl: String) async throws {
@@ -230,7 +181,7 @@ class WalletManager: ObservableObject {
         AppLogger.wallet.info("Adding mint: \(mintUrl)")
         let mint = MintUrl(url: mintUrl)
         try await wallet.addMint(mintUrl: mint, targetProofCount: nil)
-        AppLogger.wallet.info("✅ Mint added successfully: \(mintUrl)")
+        AppLogger.wallet.info("Mint added successfully: \(mintUrl)")
     }
 
     func removeMint(mintUrl: String) async throws {
@@ -241,11 +192,11 @@ class WalletManager: ObservableObject {
 
         AppLogger.wallet.info("Removing mint: \(mintUrl)")
         let mint = MintUrl(url: mintUrl)
-        try await wallet.removeMint(mintUrl: mint)
-        AppLogger.wallet.info("✅ Mint removed successfully: \(mintUrl)")
+        await wallet.removeMint(mintUrl: mint)
+        AppLogger.wallet.info("Mint removed successfully: \(mintUrl)")
     }
 
-    func getMints() async throws -> [String] {
+    func getMints() async -> [String] {
         guard let wallet = self.wallet else {
             AppLogger.wallet.debug("Wallet not available")
             return []
@@ -291,7 +242,7 @@ class WalletManager: ObservableObject {
             return 0
         }
     }
-    
+
     func refreshBalance() {
         Task {
             let newBalance = await getBalance()
@@ -301,7 +252,7 @@ class WalletManager: ObservableObject {
             }
         }
     }
-    
+
     // MARK: - Mint Quote
 
     func generateMintQuote(mintUrl: String, amount: UInt64) async throws -> (String, String, String) {
@@ -329,30 +280,9 @@ class WalletManager: ObservableObject {
     }
 
     func checkMintQuoteStatus(mintUrl: String, quoteId: String) async throws -> String {
-        guard let database = self.database else {
-            AppLogger.network.error("Database not available")
-            throw WalletError.walletNotInitialized
-        }
-
-        do {
-            // Check the quote status from the database
-            guard let mintQuote = try await database.getMintQuote(quoteId: quoteId) else {
-                AppLogger.network.warning("Mint quote \(quoteId) not found in database")
-                return "Unpaid"
-            }
-
-            let state = mintQuote.state
-            let statusString = switch state {
-            case .unpaid: "Unpaid"
-            case .paid: "Paid"
-            case .pending: "Pending"
-            case .issued: "Issued"
-            }
-            return statusString
-        } catch {
-            AppLogger.network.error("Failed to check mint quote status: \(error.localizedDescription)")
-            throw error
-        }
+        // Note: CDK 0.14.x API doesn't have a direct quote status check method
+        // The deposit flow will poll this and attempt to mint when ready
+        return "Pending"
     }
 
     func mintTokens(mintUrl: String, quoteId: String) async throws -> UInt64 {
@@ -365,9 +295,9 @@ class WalletManager: ObservableObject {
             let mint = MintUrl(url: mintUrl)
             let proofs = try await wallet.mint(mintUrl: mint, quoteId: quoteId, spendingConditions: nil)
             let totalMinted = proofs.reduce(0) { total, proof in
-                total + proof.amount().value
+                total + proof.amount.value
             }
-            AppLogger.network.info("✅ Successfully minted \(totalMinted) sats from quote \(quoteId)")
+            AppLogger.network.info("Successfully minted \(totalMinted) sats from quote \(quoteId)")
             return totalMinted
         } catch {
             AppLogger.network.error("Failed to mint tokens: \(error.localizedDescription)")
@@ -402,7 +332,7 @@ class WalletManager: ObservableObject {
 
         do {
             let meltResponse = try await wallet.melt(bolt11: invoice, options: nil, maxFee: nil)
-            AppLogger.network.info("✅ Successfully melted tokens for invoice")
+            AppLogger.network.info("Successfully melted tokens for invoice")
             return (meltResponse.amount.value, meltResponse.preimage)
         } catch {
             AppLogger.network.error("Failed to melt tokens: \(error.localizedDescription)")
@@ -440,7 +370,7 @@ class WalletManager: ObservableObject {
             let preparedSend = try await wallet.prepareSend(mintUrl: mint, amount: amountObj, options: options)
             let token = try await preparedSend.confirm(memo: memo)
             let tokenString = token.encode()
-            AppLogger.network.info("✅ Created send token for \(amount) sats")
+            AppLogger.network.info("Created send token for \(amount) sats")
             return tokenString
         } catch {
             AppLogger.network.error("Failed to create send token: \(error.localizedDescription)")
@@ -455,7 +385,6 @@ class WalletManager: ObservableObject {
         }
 
         do {
-            // Decode the token string to Token
             let token = try Token.decode(encodedToken: tokenString)
             let receiveOptions = ReceiveOptions(
                 amountSplitTarget: SplitTarget.none,
@@ -469,7 +398,7 @@ class WalletManager: ObservableObject {
                 receiveOptions: receiveOptions
             )
             let receivedAmount = try await wallet.receive(token: token, options: options)
-            AppLogger.network.info("✅ Received \(receivedAmount.value) sats")
+            AppLogger.network.info("Received \(receivedAmount.value) sats")
             return receivedAmount.value
         } catch {
             AppLogger.network.error("Failed to receive token: \(error.localizedDescription)")
@@ -486,7 +415,7 @@ class WalletManager: ObservableObject {
         do {
             let amountObj = Amount(value: amount)
             _ = try await wallet.swap(amount: amountObj, spendingConditions: nil)
-            AppLogger.network.info("✅ Swapped \(amount) sats between mints")
+            AppLogger.network.info("Swapped \(amount) sats between mints")
         } catch {
             AppLogger.network.error("Failed to swap tokens: \(error.localizedDescription)")
             throw error
@@ -497,7 +426,6 @@ class WalletManager: ObservableObject {
 enum WalletError: LocalizedError {
     case walletNotInitialized
     case failedToGenerateMnemonic
-    case userNotAuthenticated
 
     var errorDescription: String? {
         switch self {
@@ -505,8 +433,6 @@ enum WalletError: LocalizedError {
             return "Wallet is not initialized"
         case .failedToGenerateMnemonic:
             return "Failed to generate or retrieve wallet mnemonic"
-        case .userNotAuthenticated:
-            return "User is not authenticated"
         }
     }
 }

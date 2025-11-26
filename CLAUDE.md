@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-SatsApp is a Bitcoin wallet iOS application using the Cashu ecash protocol. It uses a SwiftUI-based interface with AWS Cognito authentication.
+SatsApp is a Bitcoin wallet iOS application using the Cashu ecash protocol. It uses a SwiftUI-based interface with no authentication required - the wallet opens directly on launch.
 
 ## Build Commands
 
@@ -39,32 +39,32 @@ just boot          # Boot iOS simulator
 
 The app follows MVVM pattern with SwiftUI:
 
-- **App/SatsApp.swift**: Main app entry with @StateObject managers (WalletManager, AuthManager)
+- **App/SatsApp.swift**: Main app entry with @StateObject WalletManager
 - **Models/**: Business logic and state management
-  - `WalletManager`: Cashu wallet operations, mnemonic generation, Lightning invoice creation
-  - `AuthManager`: AWS Cognito authentication flow
+  - `WalletManager`: Cashu wallet operations via MultiMintWallet, balance tracking, mint management
+  - `StorageManager`: iCloud/local storage management for wallet data
 - **Views/**: SwiftUI views organized by feature
-  - Authentication flow: AuthView → SignUpView → ConfirmEmailView
-  - Main app: ContentView (tab container) → TransactView, ActivityView, BalanceView
+  - First launch: MintSelectionView (configure initial mint)
+  - Main app: ContentView (tab container) -> TransactView, ActivityView, BalanceView
 - **Components/Theme.swift**: Centralized UI theming and styling
 
 ## Key Dependencies
 
-- **Cashu/Bitcoin**: `cdk-swift` (Cashu Development Kit)
-- **AWS Services**: Amplify Swift SDK for Cognito authentication
+- **Cashu/Bitcoin**: `cdk-swift` 0.14.1 (Cashu Development Kit) - provides MultiMintWallet and WalletSqliteDatabase
 
 ## Development Notes
 
-### Wallet Integration
-- Mnemonic stored securely in iOS Keychain
-- Connects to Cashu mints
-- Supports Lightning invoice generation for funding
+### Storage
+- Wallet data stored in iCloud Documents (with local fallback if iCloud unavailable)
+- Mnemonic (seed) stored as seed.txt in wallet directory
+- SQLite database (wallet.db) for wallet state via WalletSqliteDatabase
+- StorageManager handles storage location selection and file operations
 
-### Authentication Flow
-1. User signs up with email via AWS Cognito
-2. Email verification required
-3. Authenticated state managed by AuthManager
-4. Token refresh handled automatically
+### Wallet Integration
+- Uses MultiMintWallet for multi-mint support with unified balance
+- First launch requires mint selection (MintSelectionView)
+- Connects to Cashu mints for ecash operations
+- Supports Lightning invoice generation for funding (mint quote/melt)
 
 ### Common Issues and Solutions
 

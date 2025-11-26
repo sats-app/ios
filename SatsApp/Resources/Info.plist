@@ -46,19 +46,8 @@
         <string>UIInterfaceOrientationLandscapeLeft</string>
         <string>UIInterfaceOrientationLandscapeRight</string>
     </array>
-    <key>CFBundleURLTypes</key>
-    <array>
-        <dict>
-            <key>CFBundleURLSchemes</key>
-            <array>
-                <string>app.paywithsats.auth</string>
-            </array>
-            <key>CFBundleURLName</key>
-            <string>app.paywithsats</string>
-        </dict>
-    </array>
     <key>NSFaceIDUsageDescription</key>
-    <string>Use Face ID to authenticate with your passkey</string>
+    <string>Use Face ID to secure your wallet</string>
     <key>NSCameraUsageDescription</key>
     <string>This app needs camera access for scanning QR codes</string>
 </dict>

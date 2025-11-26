@@ -386,20 +386,13 @@ struct TransactSheetView: View {
     private func loadMints() async {
         isLoadingMints = true
 
-        do {
-            let mints = try await walletManager.getMints()
-            await MainActor.run {
-                self.availableMints = mints
-                if !mints.isEmpty && selectedMintUrl.isEmpty {
-                    self.selectedMintUrl = mints[0]
-                }
-                self.isLoadingMints = false
+        let mints = await walletManager.getMints()
+        await MainActor.run {
+            self.availableMints = mints
+            if !mints.isEmpty && selectedMintUrl.isEmpty {
+                self.selectedMintUrl = mints[0]
             }
-        } catch {
-            await MainActor.run {
-                showError("Failed to load mints: \(error.localizedDescription)")
-                self.isLoadingMints = false
-            }
+            self.isLoadingMints = false
         }
     }
 

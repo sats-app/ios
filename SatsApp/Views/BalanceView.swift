@@ -195,7 +195,7 @@ struct MintsDrawerView: View {
         isLoading = true
 
         do {
-            let mintUrls = try await walletManager.getMints()
+            let mintUrls = await walletManager.getMints()
             let balances = try await walletManager.getMintBalances()
 
             await MainActor.run {

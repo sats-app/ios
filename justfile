@@ -36,12 +36,12 @@ build:
         SIMULATOR_ID=$(xcrun simctl list devices | grep -E "iPhone.*(17\.[4-5]|18\.)" | head -n 1 | grep -oE '[A-Z0-9]{8}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{12}' || true)
         
         if [ -z "$SIMULATOR_ID" ]; then
-            echo "❌ No suitable iPhone simulator found"
+            echo "Error: No suitable iPhone simulator found"
             exit 1
         fi
     fi
     
-    echo "🔨 Building for simulator: $SIMULATOR_ID"
+    echo "Building for simulator: $SIMULATOR_ID"
     xcodebuild -project {{project}} -scheme {{scheme}} \
         -destination "platform=iOS Simulator,arch={{arch}},id=$SIMULATOR_ID" \
         -configuration {{configuration}} \
@@ -58,17 +58,17 @@ run:
     
     if [ -n "$BOOTED" ]; then
         SIMULATOR_ID="$BOOTED"
-        echo "📱 Using booted simulator: $SIMULATOR_ID"
+        echo "Using booted simulator: $SIMULATOR_ID"
     else
         # Get any iPhone simulator
         IPHONE=$(xcrun simctl list devices | grep -E "iPhone.*(17\.[4-5]|18\.)" | head -n 1 | grep -oE '[A-Z0-9]{8}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{12}' || true)
         
         if [ -z "$IPHONE" ]; then
-            echo "❌ No suitable iPhone simulator found"
+            echo "Error: No suitable iPhone simulator found"
             exit 1
         fi
         
-        echo "📱 Booting simulator: $IPHONE"
+        echo "Booting simulator: $IPHONE"
         open -a Simulator
         xcrun simctl boot "$IPHONE" 2>/dev/null || true
         
@@ -84,7 +84,7 @@ run:
     fi
     
     # Build
-    echo "🔨 Building for simulator..."
+    echo "Building..."
     xcodebuild -project {{project}} -scheme {{scheme}} \
         -destination "platform=iOS Simulator,arch={{arch}},id=$SIMULATOR_ID" \
         -configuration {{configuration}} \
@@ -93,28 +93,28 @@ run:
         build > /dev/null
     
     if [ $? -ne 0 ]; then
-        echo "❌ Build failed!"
+        echo "Error: Build failed!"
         exit 1
     fi
-    echo "✅ Build succeeded"
+    echo "Build succeeded"
     
     # Install
-    echo "📦 Installing app..."
+    echo "Installing app..."
     xcrun simctl install "$SIMULATOR_ID" {{build_dir}}/Build/Products/{{configuration}}-iphonesimulator/{{scheme}}.app
     
     if [ $? -ne 0 ]; then
-        echo "❌ Installation failed!"
+        echo "Error: Installation failed!"
         exit 1
     fi
-    echo "✅ App installed"
+    echo "App installed"
     
     # Launch
-    echo "🚀 Launching app..."
+    echo "Launching app..."
     xcrun simctl launch "$SIMULATOR_ID" {{bundle_id}}
-    echo "✅ App launched"
+    echo "App launched"
     
     # Stream logs
-    echo "📝 Streaming logs for {{bundle_id}}..."
+    echo "Streaming logs for {{bundle_id}}..."
     echo "Press Ctrl+C to stop"
     echo "----------------------------------------"
     
@@ -127,28 +127,28 @@ run-on device:
     SIMULATOR_ID=$(xcrun simctl list devices | grep "{{device}}" | head -n 1 | grep -oE '[A-Z0-9]{8}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{12}' || true)
     
     if [ -z "$SIMULATOR_ID" ]; then
-        echo "❌ Device '{{device}}' not found"
+        echo "Error: Device '{{device}}' not found"
         exit 1
     fi
     
     # Boot device if needed
     xcrun simctl boot "$SIMULATOR_ID" 2>/dev/null || true
     open -a Simulator
-    echo "📱 Using simulator: $SIMULATOR_ID"
+    echo "Using simulator: $SIMULATOR_ID"
     
     # Build
-    echo "🔨 Building..."
+    echo "Building..."
     xcodebuild -project {{project}} -scheme {{scheme}} \
         -destination "platform=iOS Simulator,arch={{arch}},id=$SIMULATOR_ID" \
         -configuration {{configuration}} \
         -derivedDataPath {{build_dir}} \
-        build > /dev/null || { echo "❌ Build failed!"; exit 1; }
+        build > /dev/null || { echo "Error: Build failed!"; exit 1; }
     
     # Install and launch
-    echo "📦 Installing and launching..."
-    xcrun simctl install "$SIMULATOR_ID" {{build_dir}}/Build/Products/{{configuration}}-iphonesimulator/{{scheme}}.app || { echo "❌ Install failed!"; exit 1; }
+    echo "Installing and launching..."
+    xcrun simctl install "$SIMULATOR_ID" {{build_dir}}/Build/Products/{{configuration}}-iphonesimulator/{{scheme}}.app || { echo "Error: Install failed!"; exit 1; }
     xcrun simctl launch "$SIMULATOR_ID" {{bundle_id}}
-    echo "✅ App launched on {{device}}"
+    echo "App launched on {{device}}"
 
 # Stream app logs in real-time
 logs:
@@ -158,17 +158,17 @@ logs:
 quick:
     #!/bin/bash
     set -euo pipefail
-    echo "🚀 Quick build and run..."
+    echo "Quick build and run..."
     
     # Get booted simulator
     SIMULATOR_ID=$(xcrun simctl list devices | grep -E "Booted" | head -n 1 | grep -oE '[A-Z0-9]{8}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{12}' || true)
     
     if [ -z "$SIMULATOR_ID" ]; then
-        echo "❌ No booted simulator found. Run 'just run' first."
+        echo "Error: No booted simulator found. Run 'just run' first."
         exit 1
     fi
     
-    echo "📱 Using simulator: $SIMULATOR_ID"
+    echo "Using simulator: $SIMULATOR_ID"
     
     # Quick build with minimal output
     xcodebuild -project {{project}} -scheme {{scheme}} \
@@ -180,7 +180,7 @@ quick:
     # Install and launch
     xcrun simctl install "$SIMULATOR_ID" {{build_dir}}/Build/Products/{{configuration}}-iphonesimulator/{{scheme}}.app
     xcrun simctl launch "$SIMULATOR_ID" {{bundle_id}}
-    echo "✅ Quick launch complete"
+    echo "Quick launch complete"
 
 # Run tests
 test:
@@ -192,11 +192,11 @@ test:
         xcrun simctl list devices | grep -E "iPhone.*(17\.[4-5]|18\.)" | head -n 1 | grep -oE '[A-Z0-9]{8}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{12}')
         
     if [ -z "$SIMULATOR_ID" ]; then
-        echo "❌ No suitable simulator found"
+        echo "Error: No suitable simulator found"
         exit 1
     fi
     
-    echo "🧪 Running tests on simulator: $SIMULATOR_ID"
+    echo "Running tests on simulator: $SIMULATOR_ID"
     xcodebuild -project {{project}} -scheme {{scheme}} \
         -destination "platform=iOS Simulator,arch={{arch}},id=$SIMULATOR_ID" \
         test
@@ -223,7 +223,7 @@ update-deps:
     rm -rf ~/Library/Caches/org.swift.swiftpm
     rm -rf {{derived_data}}
     xcodebuild -resolvePackageDependencies -project {{project}}
-    @echo "✅ Dependencies updated"
+    @echo "Dependencies updated"
 
 # Show current dependencies
 show-deps:
@@ -245,13 +245,4 @@ archive:
 reset: clean
     xcrun simctl shutdown all
     xcrun simctl erase all
-    @echo "✅ Reset complete"
-
-# Deploy backend sandbox and sync amplify_outputs.json
-backend-deploy:
-    #!/bin/bash
-    set -euo pipefail
-    echo "🚀 Deploying backend sandbox..."
-    cd ../backend && npx ampx sandbox --profile sats-app --outputs-out-dir ../ios/SatsApp/Resources/
-    echo "✅ Backend deployed and outputs synced"
-
+    @echo "Reset complete"

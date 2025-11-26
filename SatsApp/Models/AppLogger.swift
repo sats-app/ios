@@ -18,4 +18,7 @@ struct AppLogger {
 
     /// Logger for network/API operations (mint quotes, melt quotes, API calls)
     static let network = Logger(subsystem: subsystem, category: "network")
+
+    /// Logger for storage operations (iCloud, file system, seed management)
+    static let storage = Logger(subsystem: subsystem, category: "storage")
 }

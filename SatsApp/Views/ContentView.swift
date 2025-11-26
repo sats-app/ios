@@ -2,25 +2,29 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var walletManager: WalletManager
-    
+
     var body: some View {
-        if walletManager.isInitialized {
-            TabView {
-                TransactView()
-                    .tabItem {
-                        Image(systemName: "arrow.left.arrow.right")
-                        Text("Transact")
-                    }
-                
-                ActivityView()
-                    .tabItem {
-                        Image(systemName: "list.bullet")
-                        Text("Activity")
-                    }
+        Group {
+            if !walletManager.isInitialized {
+                WalletLoadingView()
+            } else if walletManager.needsMintSelection {
+                MintSelectionView()
+            } else {
+                TabView {
+                    TransactView()
+                        .tabItem {
+                            Image(systemName: "arrow.left.arrow.right")
+                            Text("Transact")
+                        }
+
+                    ActivityView()
+                        .tabItem {
+                            Image(systemName: "list.bullet")
+                            Text("Activity")
+                        }
+                }
+                .accentColor(.orange)
             }
-            .accentColor(.orange)
-        } else {
-            WalletLoadingView()
         }
     }
 }
@@ -29,4 +33,3 @@ struct ContentView: View {
     ContentView()
         .environmentObject(WalletManager())
 }
-
