@@ -9,6 +9,8 @@
 /* Begin PBXBuildFile section */
 		47F4DEDFF443F4806F209AA0 /* AppLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3729603695357C070353FFFC /* AppLogger.swift */; };
 		57FEE5D29930D25747C39372 /* MintDirectory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A4297BFD328F570E47F89FD /* MintDirectory.swift */; };
+		D12345678901ABCE /* MintInfoService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D12345678901ABCF /* MintInfoService.swift */; };
+		D12345678901ABD1 /* MintDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D12345678901ABD0 /* MintDetailView.swift */; };
 		6339661E2E859DF1001FC57B /* CashuDevKit in Frameworks */ = {isa = PBXBuildFile; productRef = 6339661D2E859DF1001FC57B /* CashuDevKit */; };
 		B12345678901ABCD /* SatsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABCC /* SatsApp.swift */; };
 		B12345678901ABCF /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABCE /* ContentView.swift */; };
@@ -32,6 +34,8 @@
 /* Begin PBXFileReference section */
 		3729603695357C070353FFFC /* AppLogger.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppLogger.swift; sourceTree = "<group>"; };
 		4A4297BFD328F570E47F89FD /* MintDirectory.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MintDirectory.swift; sourceTree = "<group>"; };
+		D12345678901ABCF /* MintInfoService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MintInfoService.swift; sourceTree = "<group>"; };
+		D12345678901ABD0 /* MintDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MintDetailView.swift; sourceTree = "<group>"; };
 		6616A52E16868EB7A0E55094 /* QRCodeView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = QRCodeView.swift; sourceTree = "<group>"; };
 		B12345678901ABC9 /* SatsApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SatsApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B12345678901ABCC /* SatsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SatsApp.swift; sourceTree = "<group>"; };
@@ -119,6 +123,7 @@
 				3729603695357C070353FFFC /* AppLogger.swift */,
 				C12345678901ABC7 /* StorageManager.swift */,
 				4A4297BFD328F570E47F89FD /* MintDirectory.swift */,
+				D12345678901ABCF /* MintInfoService.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -133,6 +138,7 @@
 				B12345678901ABE4 /* DepositSheetView.swift */,
 				B12345678901ABE8 /* WalletLoadingView.swift */,
 				C12345678901ABC9 /* MintSelectionView.swift */,
+				D12345678901ABD0 /* MintDetailView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -246,6 +252,8 @@
 				C12345678901ABC6 /* StorageManager.swift in Sources */,
 				C12345678901ABC8 /* MintSelectionView.swift in Sources */,
 				57FEE5D29930D25747C39372 /* MintDirectory.swift in Sources */,
+				D12345678901ABCE /* MintInfoService.swift in Sources */,
+				D12345678901ABD1 /* MintDetailView.swift in Sources */,
 				BF401BB572094DBCF82E13F3 /* QRCodeView.swift in Sources */,
 				CBECD537C820DD3993B261BA /* AnimatedQRCodeView.swift in Sources */,
 			);

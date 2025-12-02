@@ -7,6 +7,15 @@ struct MintListItem: Identifiable, Codable {
     let state: String
     private let infoString: String?
 
+    /// Memberwise initializer for creating instances (e.g., for previews)
+    init(id: Int, url: String, name: String?, state: String, infoString: String? = nil) {
+        self.id = id
+        self.url = url
+        self.name = name
+        self.state = state
+        self.infoString = infoString
+    }
+
     struct MintInfo: Codable {
         let name: String?
         let description: String?

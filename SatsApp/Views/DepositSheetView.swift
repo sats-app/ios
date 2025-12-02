@@ -63,45 +63,75 @@ struct DepositSheetView: View {
     }
 
     private var amountInputView: some View {
-        VStack(spacing: 20) {
-            VStack(spacing: 16) {
+        VStack(spacing: 0) {
+            // Header with icon and title
+            VStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(Color.orange)
+                        .frame(width: 60, height: 60)
+
+                    Image(systemName: "arrow.down.circle.fill")
+                        .font(.title)
+                        .foregroundColor(.white)
+                }
+
                 Text("Generate Deposit")
                     .font(.title2)
                     .fontWeight(.semibold)
-                    .foregroundColor(.primary)
+                    .foregroundColor(.orange)
+            }
+            .padding(.top, 20)
+            .padding(.bottom, 16)
 
-                if isLoadingMints {
-                    ProgressView()
-                } else if availableMints.isEmpty {
-                    Text("No mints available")
-                        .foregroundColor(.gray)
-                } else {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Select Mint")
-                            .font(.headline)
-                            .foregroundColor(.secondary)
+            // Amount input
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                TextField("0", text: $amount)
+                    .keyboardType(.numberPad)
+                    .font(.system(size: 48, weight: .light))
+                    .foregroundColor(.orange)
+                    .multilineTextAlignment(.trailing)
+                    .frame(minWidth: 60)
+                    .fixedSize()
 
-                        Picker("Mint", selection: $selectedMintUrl) {
-                            ForEach(availableMints, id: \.self) { mint in
-                                Text(URL(string: mint)?.host ?? mint)
-                                    .tag(mint)
-                            }
+                Text("sat")
+                    .font(.system(size: 48, weight: .light))
+                    .foregroundColor(.orange)
+            }
+            .padding(.bottom, 24)
+
+            // Compact mint selector
+            if isLoadingMints {
+                ProgressView()
+                    .padding(.bottom, 16)
+            } else if availableMints.isEmpty {
+                Text("No mints available")
+                    .foregroundColor(.gray)
+                    .padding(.bottom, 16)
+            } else {
+                HStack {
+                    Image(systemName: "building.columns")
+                        .foregroundColor(.orange)
+                        .font(.subheadline)
+
+                    Picker("Mint", selection: $selectedMintUrl) {
+                        ForEach(availableMints, id: \.self) { mint in
+                            Text(URL(string: mint)?.host ?? mint)
+                                .tag(mint)
                         }
-                        .pickerStyle(MenuPickerStyle())
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.gray.opacity(0.1))
-                        .cornerRadius(8)
                     }
-
-                    TextField("Amount", text: $amount)
-                        .keyboardType(.numberPad)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .font(.title3)
-                        .multilineTextAlignment(.center)
+                    .pickerStyle(MenuPickerStyle())
+                    .tint(.primary)
                 }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(Color.gray.opacity(0.1))
+                .cornerRadius(8)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 16)
             }
 
+            // Generate button
             Button(action: generateDeposit) {
                 HStack {
                     if isLoading {
@@ -119,8 +149,9 @@ struct DepositSheetView: View {
             .cornerRadius(12)
             .font(.headline)
             .disabled(!canGenerateDeposit || isLoading)
+            .padding(.horizontal, 20)
+            .padding(.bottom, 20)
         }
-        .padding(20)
     }
 
     private var depositRequestView: some View {

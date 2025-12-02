@@ -23,6 +23,8 @@ struct MintBrowserView: View {
     @State private var existingMints: Set<String> = []
     @State private var errorMessage: String?
     @State private var showingError = false
+    @State private var mintToConfirm: MintListItem?
+    @State private var showingTrustConfirmation = false
 
     private var filteredMints: [MintListItem] {
         if searchText.isEmpty {
@@ -49,6 +51,17 @@ struct MintBrowserView: View {
             Button("OK") {}
         } message: {
             Text(errorMessage ?? "An error occurred")
+        }
+        .alert("Trust This Mint?", isPresented: $showingTrustConfirmation, presenting: mintToConfirm) { mint in
+            Button("Cancel", role: .cancel) {
+                mintToConfirm = nil
+            }
+            Button("Add Mint") {
+                Task { await addMint(url: mint.url) }
+                mintToConfirm = nil
+            }
+        } message: { mint in
+            Text("Adding \(mint.displayName) means trusting it to hold your funds. Only add mints you trust.")
         }
     }
 
@@ -158,12 +171,21 @@ struct MintBrowserView: View {
                     // Mint list section
                     Section {
                         ForEach(filteredMints) { mint in
+                            let isAdded = existingMints.contains(mint.url) || addedMints.contains(mint.url)
                             MintRowView(
                                 mint: mint,
-                                isAdded: existingMints.contains(mint.url) || addedMints.contains(mint.url),
+                                isAdded: isAdded,
                                 isAdding: isAddingMint,
-                                onAdd: {
-                                    Task { await addMint(url: mint.url) }
+                                onTapToAdd: {
+                                    mintToConfirm = mint
+                                    showingTrustConfirmation = true
+                                },
+                                onMintAdded: { url in
+                                    addedMints.insert(url)
+                                    onMintAdded?(url)
+                                    if mode == .addMint {
+                                        dismiss()
+                                    }
                                 }
                             )
                         }
@@ -261,10 +283,15 @@ struct MintBrowserView: View {
 // MARK: - Mint Row View
 
 struct MintRowView: View {
+    @EnvironmentObject var walletManager: WalletManager
+
     let mint: MintListItem
     let isAdded: Bool
     let isAdding: Bool
-    let onAdd: () -> Void
+    let onTapToAdd: () -> Void
+    var onMintAdded: ((String) -> Void)?
+
+    @State private var showingDetail = false
 
     var body: some View {
         HStack(spacing: 12) {
@@ -291,7 +318,6 @@ struct MintRowView: View {
                 Text(mint.displayName)
                     .font(.headline)
                     .foregroundColor(.primary)
-                    .lineLimit(1)
 
                 if let description = mint.displayDescription {
                     Text(description)
@@ -303,7 +329,7 @@ struct MintRowView: View {
 
             Spacer()
 
-            // Add button or checkmark
+            // Status indicator or info icon
             if isAdded {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundColor(.green)
@@ -312,17 +338,35 @@ struct MintRowView: View {
                 ProgressView()
                     .scaleEffect(0.8)
             } else {
-                Button(action: onAdd) {
-                    Image(systemName: "plus.circle")
+                // Info icon - navigates to detail view
+                Button {
+                    showingDetail = true
+                } label: {
+                    Image(systemName: "info.circle")
                         .foregroundColor(.orange)
                         .font(.title2)
                 }
-                .buttonStyle(PlainButtonStyle())
+                .buttonStyle(BorderlessButtonStyle())
             }
         }
         .padding(.vertical, 4)
         .contentShape(Rectangle())
+        .onTapGesture {
+            if !isAdded && !isAdding {
+                onTapToAdd()
+            }
+        }
         .opacity(isAdded ? 0.6 : 1.0)
+        .background(
+            NavigationLink(destination: MintDetailView(
+                mint: mint,
+                isAlreadyAdded: isAdded,
+                onMintAdded: onMintAdded
+            ).environmentObject(walletManager), isActive: $showingDetail) {
+                EmptyView()
+            }
+            .opacity(0)
+        )
     }
 
     private var mintPlaceholder: some View {

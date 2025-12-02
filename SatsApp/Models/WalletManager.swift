@@ -188,6 +188,13 @@ class WalletManager: ObservableObject {
             throw WalletError.walletNotInitialized
         }
 
+        // Check if mint has balance before removing
+        let balances = try await getMintBalances()
+        if let balance = balances[mintUrl], balance > 0 {
+            AppLogger.wallet.warning("Cannot remove mint with balance: \(mintUrl) has \(balance) sats")
+            throw WalletError.mintHasBalance
+        }
+
         AppLogger.wallet.info("Removing mint: \(mintUrl)")
         let mint = MintUrl(url: mintUrl)
         await wallet.removeMint(mintUrl: mint)
@@ -424,6 +431,7 @@ class WalletManager: ObservableObject {
 enum WalletError: LocalizedError {
     case walletNotInitialized
     case failedToGenerateMnemonic
+    case mintHasBalance
 
     var errorDescription: String? {
         switch self {
@@ -431,6 +439,8 @@ enum WalletError: LocalizedError {
             return "Wallet is not initialized"
         case .failedToGenerateMnemonic:
             return "Failed to generate or retrieve wallet mnemonic"
+        case .mintHasBalance:
+            return "Cannot remove mint with remaining balance. Please transfer or spend funds first."
         }
     }
 }
