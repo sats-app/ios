@@ -22,7 +22,7 @@ enum TransactMode {
     var successMessage: String {
         switch self {
         case .pay: return "Payment sent!"
-        case .request: return "Request sent!"
+        case .request: return "Invoice created!"
         }
     }
 }
@@ -213,9 +213,14 @@ struct TransactSheetView: View {
             }
             .padding(.top, 20)
 
-            // QR Code
-            QRCodeView(text: generatedContent)
-                .frame(width: 200, height: 200)
+            // QR Code - animated for long tokens (NUT-16), static for short ones
+            if generatedContent.count > 600 {
+                AnimatedQRCodeView(content: generatedContent)
+                    .frame(width: 200, height: 280)
+            } else {
+                QRCodeView(text: generatedContent)
+                    .frame(width: 200, height: 200)
+            }
 
             // Truncated content text
             Text(truncatedContent(generatedContent))
@@ -297,35 +302,33 @@ struct TransactSheetView: View {
             }
             .padding(.top, 20)
 
-            // Mint selector (only for pay mode)
-            if mode == .pay {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Select Mint")
-                        .font(.headline)
-                        .fontWeight(.medium)
-                        .foregroundColor(Color.orange)
+            // Mint selector
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Select Mint")
+                    .font(.headline)
+                    .fontWeight(.medium)
+                    .foregroundColor(Color.orange)
 
-                    if isLoadingMints {
-                        ProgressView()
-                    } else if availableMints.isEmpty {
-                        Text("No mints available")
-                            .foregroundColor(.gray)
-                    } else {
-                        Picker("Mint", selection: $selectedMintUrl) {
-                            ForEach(availableMints, id: \.self) { mint in
-                                Text(URL(string: mint)?.host ?? mint)
-                                    .tag(mint)
-                            }
+                if isLoadingMints {
+                    ProgressView()
+                } else if availableMints.isEmpty {
+                    Text("No mints available")
+                        .foregroundColor(.gray)
+                } else {
+                    Picker("Mint", selection: $selectedMintUrl) {
+                        ForEach(availableMints, id: \.self) { mint in
+                            Text(URL(string: mint)?.host ?? mint)
+                                .tag(mint)
                         }
-                        .pickerStyle(MenuPickerStyle())
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.gray.opacity(0.2))
-                        .cornerRadius(8)
                     }
+                    .pickerStyle(MenuPickerStyle())
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.gray.opacity(0.2))
+                    .cornerRadius(8)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             // Memo field
             VStack(alignment: .leading, spacing: 8) {
@@ -467,13 +470,30 @@ struct TransactSheetView: View {
                     walletManager.refreshBalance()
 
                 case .request:
-                    // Placeholder for Cashu Payment Request (NUT-18)
-                    // Format: creq:placeholder:<amount>:<memo>
-                    let memoParam = memo.isEmpty ? "" : ":\(memo)"
-                    let placeholder = "creq:placeholder:\(amount)\(memoParam)"
+                    // Generate Lightning invoice via mint quote
+                    guard !selectedMintUrl.isEmpty else {
+                        await MainActor.run {
+                            showError("Please select a mint")
+                            isLoading = false
+                        }
+                        return
+                    }
+
+                    guard let amountValue = UInt64(amount), amountValue > 0 else {
+                        await MainActor.run {
+                            showError("Invalid amount")
+                            isLoading = false
+                        }
+                        return
+                    }
+
+                    let quote = try await walletManager.generateMintQuote(
+                        mintUrl: selectedMintUrl,
+                        amount: amountValue
+                    )
 
                     await MainActor.run {
-                        generatedContent = placeholder
+                        generatedContent = quote.request
                         isLoading = false
                         showQRResult = true
                     }
