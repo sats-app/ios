@@ -144,7 +144,7 @@ struct TransactionRowView: View {
     
     private var amountText: String {
         let prefix = transaction.type == .received ? "+" : "-"
-        return "\(prefix)\(formatAmount(transaction.amount)) sat"
+        return "\(prefix)₿\(formatAmount(transaction.amount))"
     }
     
     private var amountColor: Color {

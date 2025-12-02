@@ -28,6 +28,8 @@
 		C12345678901ABC6 /* StorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C12345678901ABC7 /* StorageManager.swift */; };
 		C12345678901ABC8 /* MintSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C12345678901ABC9 /* MintSelectionView.swift */; };
 		CBECD537C820DD3993B261BA /* AnimatedQRCodeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B14188E42FA49335CD5BB6B3 /* AnimatedQRCodeView.swift */; };
+		E12345678901ABD2 /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E12345678901ABD3 /* QRScannerView.swift */; };
+		F12345678901ABCE /* AnimatedDigitsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F12345678901ABCD /* AnimatedDigitsView.swift */; };
 		F013C5A2C3C48667F3FBE5BB /* URUI in Frameworks */ = {isa = PBXBuildFile; productRef = 70FE868618882C027F706631 /* URUI */; };
 /* End PBXBuildFile section */
 
@@ -52,8 +54,10 @@
 		B12345678901ABF9 /* UITransaction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UITransaction.swift; sourceTree = "<group>"; };
 		B14188E42FA49335CD5BB6B3 /* AnimatedQRCodeView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AnimatedQRCodeView.swift; sourceTree = "<group>"; };
 		C12345678901ABC7 /* StorageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageManager.swift; sourceTree = "<group>"; };
+		F12345678901ABCD /* AnimatedDigitsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnimatedDigitsView.swift; sourceTree = "<group>"; };
 		C12345678901ABC9 /* MintSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MintSelectionView.swift; sourceTree = "<group>"; };
 		C12345678901ABCA /* SatsApp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SatsApp.entitlements; sourceTree = "<group>"; };
+		E12345678901ABD3 /* QRScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRScannerView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -139,6 +143,7 @@
 				B12345678901ABE8 /* WalletLoadingView.swift */,
 				C12345678901ABC9 /* MintSelectionView.swift */,
 				D12345678901ABD0 /* MintDetailView.swift */,
+				E12345678901ABD3 /* QRScannerView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -149,6 +154,7 @@
 				B12345678901ABE6 /* Theme.swift */,
 				6616A52E16868EB7A0E55094 /* QRCodeView.swift */,
 				B14188E42FA49335CD5BB6B3 /* AnimatedQRCodeView.swift */,
+				F12345678901ABCD /* AnimatedDigitsView.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -256,6 +262,8 @@
 				D12345678901ABD1 /* MintDetailView.swift in Sources */,
 				BF401BB572094DBCF82E13F3 /* QRCodeView.swift in Sources */,
 				CBECD537C820DD3993B261BA /* AnimatedQRCodeView.swift in Sources */,
+				E12345678901ABD2 /* QRScannerView.swift in Sources */,
+				F12345678901ABCE /* AnimatedDigitsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

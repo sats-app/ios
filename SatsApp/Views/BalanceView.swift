@@ -7,21 +7,18 @@ struct AnimatedBalanceText: View {
 
     var body: some View {
         Text(balance)
-            .font(.headline)
-            .fontWeight(.medium)
+            .font(.title3)
+            .fontWeight(.semibold)
             .foregroundColor(Color.orange)
             .scaleEffect(animateBalance ? 1.1 : 1.0)
             .animation(.spring(response: 0.4, dampingFraction: 0.6), value: animateBalance)
             .onChange(of: balance) { newBalance in
                 if previousBalance != newBalance && !previousBalance.isEmpty {
-                    // Animate when balance changes
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+                    withAnimation {
                         animateBalance = true
                     }
-
-                    // Reset animation after a short delay
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-                        withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                        withAnimation {
                             animateBalance = false
                         }
                     }
@@ -58,6 +55,7 @@ struct BalanceToolbarModifier: ViewModifier {
                             showingDepositSheet = true
                         }) {
                             Image(systemName: "plus.circle")
+                                .font(.subheadline)
                                 .foregroundColor(.orange)
                         }
                     }
@@ -106,7 +104,9 @@ struct AdaptiveSheetModifier<SheetContent: View>: ViewModifier {
                                     subHeight = proxy.size.height
                                 }
                                 .onChange(of: proxy.size.height) { newHeight in
-                                    subHeight = newHeight
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        subHeight = newHeight
+                                    }
                                 }
                         }
                     )
@@ -211,7 +211,7 @@ struct MintsDrawerView: View {
                     formatter.numberStyle = .decimal
                     formatter.groupingSeparator = ","
                     formatter.usesGroupingSeparator = true
-                    let balanceString = (formatter.string(from: NSNumber(value: balance)) ?? "0") + " sat"
+                    let balanceString = "₿" + (formatter.string(from: NSNumber(value: balance)) ?? "0")
 
                     return UIMintInfo(
                         name: URL(string: url)?.host ?? "Unknown Mint",

@@ -19,8 +19,9 @@ struct DepositSheetView: View {
     @State private var showingError = false
     @State private var errorMessage = ""
     @State private var pollTimer: Timer?
+    @State private var showCopyConfirmation = false
 
-    private enum ViewState {
+    private enum ViewState: Equatable {
         case amountInput
         case depositRequest
         case minting
@@ -41,16 +42,20 @@ struct DepositSheetView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            switch currentState {
-            case .amountInput:
-                amountInputView
-            case .depositRequest:
-                depositRequestView
-            case .minting:
-                mintingView
-            case .completed:
-                completedView
+            Group {
+                switch currentState {
+                case .amountInput:
+                    amountInputView
+                case .depositRequest:
+                    depositRequestView
+                case .minting:
+                    mintingView
+                case .completed:
+                    completedView
+                }
             }
+            .transition(.opacity.combined(with: .scale(scale: 0.95)))
+            .animation(.easeInOut(duration: 0.25), value: currentState)
         }
         .alert("Error", isPresented: $showingError) {
             Button("OK") {}
@@ -71,7 +76,7 @@ struct DepositSheetView: View {
                         .fill(Color.orange)
                         .frame(width: 60, height: 60)
 
-                    Image(systemName: "arrow.down.circle.fill")
+                    Image(systemName: "plus.circle.fill")
                         .font(.title)
                         .foregroundColor(.white)
                 }
@@ -85,18 +90,18 @@ struct DepositSheetView: View {
             .padding(.bottom, 16)
 
             // Amount input
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
+            HStack(alignment: .firstTextBaseline, spacing: 0) {
+                Text("₿")
+                    .font(.system(size: 48, weight: .light))
+                    .foregroundColor(.orange)
+
                 TextField("0", text: $amount)
                     .keyboardType(.numberPad)
                     .font(.system(size: 48, weight: .light))
                     .foregroundColor(.orange)
-                    .multilineTextAlignment(.trailing)
+                    .multilineTextAlignment(.leading)
                     .frame(minWidth: 60)
                     .fixedSize()
-
-                Text("sat")
-                    .font(.system(size: 48, weight: .light))
-                    .foregroundColor(.orange)
             }
             .padding(.bottom, 24)
 
@@ -157,10 +162,10 @@ struct DepositSheetView: View {
     private var depositRequestView: some View {
         VStack(spacing: 20) {
             VStack(spacing: 16) {
-                Text("Deposit Request")
+                Text("Deposit ₿\(amount)")
                     .font(.title2)
                     .fontWeight(.semibold)
-                    .foregroundColor(.primary)
+                    .foregroundColor(.orange)
 
                 if let request = depositRequest {
                     VStack(spacing: 16) {
@@ -186,9 +191,17 @@ struct DepositSheetView: View {
 
                                 Button(action: {
                                     copyToClipboard(request)
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        showCopyConfirmation = true
+                                    }
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                                        withAnimation(.easeInOut(duration: 0.2)) {
+                                            showCopyConfirmation = false
+                                        }
+                                    }
                                 }) {
-                                    Image(systemName: "doc.on.doc")
-                                        .foregroundColor(.orange)
+                                    Image(systemName: showCopyConfirmation ? "checkmark" : "doc.on.doc")
+                                        .foregroundColor(showCopyConfirmation ? .green : .orange)
                                 }
                             }
                         }
@@ -275,7 +288,7 @@ struct DepositSheetView: View {
                     .foregroundColor(.primary)
 
                 if let minted = mintedAmount {
-                    Text("Minted: \(minted) sats")
+                    Text("Minted: ₿\(minted)")
                         .font(.title3)
                         .fontWeight(.medium)
                         .foregroundColor(.orange)

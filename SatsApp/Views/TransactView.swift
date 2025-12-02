@@ -31,14 +31,17 @@ struct TransactView: View {
     @EnvironmentObject var walletManager: WalletManager
     @State private var amount: String = "0"
     @State private var showingTransactSheet = false
+    @State private var showingScanner = false
     @State private var transactMode: TransactMode = .pay
-    
+    @State private var scanSuccessAmount: UInt64?
+    @State private var showingScanSuccess = false
+
     var body: some View {
         NavigationView {
             VStack(spacing: 20) {
                 Spacer()
                 
-                Text("\(amount) sat")
+                Text("₿\(amount)")
                     .font(.system(size: 48, weight: .light))
                     .foregroundColor(Color.orange)
                     .padding(.horizontal)
@@ -60,6 +63,7 @@ struct TransactView: View {
                     .font(.headline)
                     
                     Button(action: {
+                        showingScanner = true
                     }) {
                         Image(systemName: "qrcode")
                             .font(.title2)
@@ -84,10 +88,18 @@ struct TransactView: View {
                 .padding(.bottom, 20)
             }
             .balanceToolbar()
-            .sheet(isPresented: $showingTransactSheet, onDismiss: {
-                amount = "0"
-            }) {
+            .adaptiveSheet(isPresent: $showingTransactSheet) {
                 TransactSheetView(amount: amount, mode: transactMode)
+                    .onDisappear { amount = "0" }
+            }
+            .fullScreenCover(isPresented: $showingScanner) {
+                QRScannerView(onTokenReceived: { amount in
+                    scanSuccessAmount = amount
+                    showingScanSuccess = true
+                })
+            }
+            .adaptiveSheet(isPresent: $showingScanSuccess) {
+                ScanSuccessView(amount: scanSuccessAmount ?? 0)
             }
         }
         .onAppear {
@@ -168,17 +180,25 @@ struct TransactSheetView: View {
     @State private var generatedContent: String = ""
     @State private var showingError = false
     @State private var errorMessage = ""
+    @State private var hasCopied = false
+    @State private var isSpent = false
+    @State private var pollingTask: Task<Void, Never>?
     @Environment(\.presentationMode) var presentationMode
     
     var body: some View {
         VStack(spacing: 0) {
-            if showQRResult {
-                // QR Result view
-                qrResultView
-            } else {
-                // Input form
-                inputFormView
+            Group {
+                if isSpent {
+                    successView
+                } else if showQRResult {
+                    qrResultView
+                } else {
+                    inputFormView
+                }
             }
+            .transition(.opacity.combined(with: .scale(scale: 0.95)))
+            .animation(.easeInOut(duration: 0.25), value: showQRResult)
+            .animation(.easeInOut(duration: 0.3), value: isSpent)
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
@@ -190,94 +210,149 @@ struct TransactSheetView: View {
         .task {
             await loadMints()
         }
+        .onDisappear {
+            pollingTask?.cancel()
+        }
+    }
+
+    private var successView: some View {
+        VStack(spacing: 20) {
+            Spacer()
+
+            ZStack {
+                Circle()
+                    .fill(Color.green.opacity(0.15))
+                    .frame(width: 100, height: 100)
+
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 60))
+                    .foregroundColor(.green)
+            }
+
+            Text(mode == .pay ? "Tokens claimed!" : "Payment received!")
+                .font(.title2)
+                .fontWeight(.semibold)
+                .foregroundColor(.primary)
+
+            Text("₿\(amount)")
+                .font(.title3)
+                .foregroundColor(.secondary)
+
+            Spacer()
+        }
+        .padding()
+        .onAppear {
+            // Auto-dismiss after delay
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                presentationMode.wrappedValue.dismiss()
+            }
+        }
     }
 
     private var qrResultView: some View {
-        VStack(spacing: 20) {
-            // Header
-            VStack(spacing: 16) {
+        VStack(spacing: 16) {
+            // Header with icon above amount (matches input form style)
+            VStack(spacing: 8) {
                 ZStack {
                     Circle()
                         .fill(Color.orange)
-                        .frame(width: 60, height: 60)
+                        .frame(width: 44, height: 44)
 
                     Image(systemName: mode.iconName)
-                        .font(.title)
+                        .font(.title3)
                         .foregroundColor(Color.white)
                 }
 
-                Text("\(amount) sat")
+                Text("\(mode == .pay ? "Pay" : "Request") ₿\(amount)")
                     .font(.title2)
-                    .bold()
+                    .fontWeight(.semibold)
                     .foregroundColor(Color.orange)
             }
-            .padding(.top, 20)
+            .padding(.top, 16)
 
             // QR Code - animated for long tokens (NUT-16), static for short ones
+            // Larger size to take up more space
             if generatedContent.count > 600 {
                 AnimatedQRCodeView(content: generatedContent)
-                    .frame(width: 200, height: 280)
+                    .frame(maxWidth: 300)
+                    .frame(height: 380)
             } else {
                 QRCodeView(text: generatedContent)
-                    .frame(width: 200, height: 200)
+                    .frame(width: 280, height: 280)
             }
 
-            // Truncated content text
-            Text(truncatedContent(generatedContent))
-                .font(.system(.caption, design: .monospaced))
-                .foregroundColor(.secondary)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(Color.gray.opacity(0.1))
-                .cornerRadius(8)
+            // Truncated content text - tappable to copy
+            Button(action: {
+                UIPasteboard.general.string = generatedContent
+                hasCopied = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                    hasCopied = false
+                }
+            }) {
+                Text(truncatedContent(generatedContent))
+                    .font(.system(.caption, design: .monospaced))
+                    .foregroundColor(hasCopied ? .green : .secondary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color.gray.opacity(0.1))
+                    .cornerRadius(8)
+            }
 
             // Action buttons
-            HStack(spacing: 16) {
+            HStack(spacing: 20) {
                 ShareLink(item: generatedContent) {
-                    HStack {
-                        Image(systemName: "square.and.arrow.up")
-                        Text("Share")
-                    }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 44)
-                    .background(Color.orange)
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
-                    .font(.subheadline.weight(.medium))
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.title3)
+                        .foregroundColor(Color.orange)
+                        .frame(width: 44, height: 44)
+                        .background(Color.gray.opacity(0.1))
+                        .clipShape(Circle())
                 }
 
                 Button(action: {
                     // NFC placeholder - not implemented
                 }) {
-                    HStack {
-                        Image(systemName: "wave.3.right.circle")
-                        Text("NFC")
-                    }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 44)
-                    .background(Color.gray.opacity(0.2))
-                    .foregroundColor(.gray)
-                    .cornerRadius(8)
-                    .font(.subheadline.weight(.medium))
+                    Image(systemName: "wave.3.right.circle")
+                        .font(.title3)
+                        .foregroundColor(Color.orange)
+                        .frame(width: 44, height: 44)
+                        .background(Color.gray.opacity(0.1))
+                        .clipShape(Circle())
                 }
                 .disabled(true)
             }
-            .padding(.horizontal, 20)
-
-            Spacer()
-
-            // Done button
-            Button("Done") {
-                presentationMode.wrappedValue.dismiss()
+            .padding(.bottom, 20)
+        }
+        .padding(.horizontal, 20)
+        .onAppear {
+            // Start polling for spent status (pay mode only)
+            if mode == .pay {
+                startPollingForSpent()
             }
-            .frame(maxWidth: .infinity)
-            .frame(height: 50)
-            .background(Color.orange)
-            .foregroundColor(.white)
-            .cornerRadius(12)
-            .font(.headline)
-            .padding(.horizontal, 20)
-            .padding(.bottom, 30)
+        }
+    }
+
+    private func startPollingForSpent() {
+        pollingTask = Task {
+            while !Task.isCancelled && !isSpent {
+                try? await Task.sleep(nanoseconds: 3_000_000_000) // 3 seconds
+
+                guard !Task.isCancelled else { break }
+
+                do {
+                    let spent = try await walletManager.checkTokenSpent(tokenString: generatedContent)
+                    if spent {
+                        await MainActor.run {
+                            isSpent = true
+                            walletManager.refreshBalance()
+                        }
+                        break
+                    }
+                } catch {
+                    // Silently continue polling on error
+                    AppLogger.network.debug("Proof check failed: \(error.localizedDescription)")
+                }
+            }
         }
     }
 
@@ -295,7 +370,7 @@ struct TransactSheetView: View {
                         .foregroundColor(Color.white)
                 }
 
-                Text("\(amount) sat")
+                Text("\(mode == .pay ? "Pay" : "Request") ₿\(amount)")
                     .font(.title2)
                     .bold()
                     .foregroundColor(Color.orange)
@@ -303,18 +378,19 @@ struct TransactSheetView: View {
             .padding(.top, 20)
 
             // Mint selector
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Select Mint")
-                    .font(.headline)
-                    .fontWeight(.medium)
-                    .foregroundColor(Color.orange)
+            if isLoadingMints {
+                ProgressView()
+                    .padding(.bottom, 16)
+            } else if availableMints.isEmpty {
+                Text("No mints available")
+                    .foregroundColor(.gray)
+                    .padding(.bottom, 16)
+            } else {
+                HStack {
+                    Image(systemName: "building.columns")
+                        .foregroundColor(.orange)
+                        .font(.subheadline)
 
-                if isLoadingMints {
-                    ProgressView()
-                } else if availableMints.isEmpty {
-                    Text("No mints available")
-                        .foregroundColor(.gray)
-                } else {
                     Picker("Mint", selection: $selectedMintUrl) {
                         ForEach(availableMints, id: \.self) { mint in
                             Text(URL(string: mint)?.host ?? mint)
@@ -322,13 +398,13 @@ struct TransactSheetView: View {
                         }
                     }
                     .pickerStyle(MenuPickerStyle())
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.gray.opacity(0.2))
-                    .cornerRadius(8)
+                    .tint(.primary)
                 }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(Color.gray.opacity(0.1))
+                .cornerRadius(8)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
 
             // Memo field
             VStack(alignment: .leading, spacing: 8) {
@@ -503,6 +579,44 @@ struct TransactSheetView: View {
                     showError("Transaction failed: \(error.localizedDescription)")
                     isLoading = false
                 }
+            }
+        }
+    }
+}
+
+// MARK: - Scan Success View
+
+struct ScanSuccessView: View {
+    let amount: UInt64
+    @Environment(\.dismiss) var dismiss
+
+    var body: some View {
+        VStack(spacing: 20) {
+            ZStack {
+                Circle()
+                    .fill(Color.green.opacity(0.15))
+                    .frame(width: 100, height: 100)
+
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 60))
+                    .foregroundColor(.green)
+            }
+
+            Text("Received!")
+                .font(.title2)
+                .fontWeight(.semibold)
+                .foregroundColor(.primary)
+
+            Text(WalletManager.formatAmount(amount))
+                .font(.title3)
+                .foregroundColor(.secondary)
+        }
+        .padding(.vertical, 40)
+        .padding(.horizontal, 20)
+        .onAppear {
+            // Auto-dismiss after delay
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                dismiss()
             }
         }
     }

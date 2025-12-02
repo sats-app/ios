@@ -15,7 +15,7 @@ class WalletManager: ObservableObject {
         formatter.numberStyle = .decimal
         formatter.groupingSeparator = ","
         formatter.usesGroupingSeparator = true
-        return (formatter.string(from: NSNumber(value: balance)) ?? "0") + " sat"
+        return "₿" + (formatter.string(from: NSNumber(value: balance)) ?? "0")
     }
 
     private var database: WalletSqliteDatabase?
@@ -425,6 +425,25 @@ class WalletManager: ObservableObject {
             AppLogger.network.error("Failed to swap tokens: \(error.localizedDescription)")
             throw error
         }
+    }
+
+    // MARK: - Proof State Checking
+
+    /// Checks if the proofs in a token have been spent (claimed by recipient)
+    /// Note: Currently not implemented - requires CDK API for proof Y value extraction
+    /// The UI will still function but won't auto-detect when tokens are claimed
+    func checkTokenSpent(tokenString: String) async throws -> Bool {
+        // TODO: Implement NUT-07 proof state checking when CDK API is available
+        // This requires:
+        // 1. Decoding the token to get proofs
+        // 2. Extracting Y values (hash_to_curve(secret)) from each proof
+        // 3. Calling mint's /v1/checkstate endpoint
+        // 4. Checking if all proofs are SPENT
+
+        // For now, return false to keep the QR code visible
+        // User can manually dismiss or share the token
+        AppLogger.network.debug("Proof state check not implemented - returning false")
+        return false
     }
 }
 
