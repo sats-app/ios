@@ -16,6 +16,22 @@ struct MintListItem: Identifiable, Codable {
         self.infoString = infoString
     }
 
+    /// Initialize from a custom mint URL and its fetched info
+    init(url: String, info: MintInfoResponse) {
+        self.id = url.hashValue
+        self.url = url
+        self.name = info.name
+        self.state = "OK"
+        // Encode the info as JSON string for infoString
+        let mintInfo = MintInfo(name: info.name, description: info.description, iconUrl: info.iconUrl)
+        if let data = try? JSONEncoder().encode(mintInfo),
+           let jsonString = String(data: data, encoding: .utf8) {
+            self.infoString = jsonString
+        } else {
+            self.infoString = nil
+        }
+    }
+
     struct MintInfo: Codable {
         let name: String?
         let description: String?

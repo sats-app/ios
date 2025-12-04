@@ -9,6 +9,7 @@ class WalletManager: ObservableObject {
     @Published var isLoading = true
     @Published var balance: UInt64 = 0
     @Published var isUsingICloud: Bool = false
+    @Published var mintNames: [String: String] = [:]
 
     var formattedBalance: String {
         let formatter = NumberFormatter()
@@ -212,6 +213,38 @@ class WalletManager: ObservableObject {
         return mints
     }
 
+    /// Returns the display name for a mint URL, with fallback to URL host
+    func getMintDisplayName(for url: String) -> String {
+        if let name = mintNames[url], !name.isEmpty {
+            return name
+        }
+        return URL(string: url)?.host ?? url
+    }
+
+    /// Fetches and caches mint names for all configured mints
+    func refreshMintNames() {
+        Task {
+            let mints = await getMints()
+            for mintUrl in mints {
+                // Skip if already cached
+                if mintNames[mintUrl] != nil {
+                    continue
+                }
+
+                do {
+                    let info = try await MintInfoService.shared.fetchMintInfo(mintUrl: mintUrl)
+                    if let name = info.name, !name.isEmpty {
+                        await MainActor.run {
+                            self.mintNames[mintUrl] = name
+                        }
+                    }
+                } catch {
+                    AppLogger.network.debug("Failed to fetch mint info for \(mintUrl): \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+
     func getMintBalances() async throws -> [String: UInt64] {
         guard let wallet = self.wallet else {
             AppLogger.wallet.debug("Wallet not available")
@@ -256,6 +289,7 @@ class WalletManager: ObservableObject {
                 AppLogger.wallet.debug("Balance updated to: \(newBalance) sats")
             }
         }
+        refreshMintNames()
     }
 
     // MARK: - Mint Quote

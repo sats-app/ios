@@ -17,7 +17,6 @@ struct MintBrowserView: View {
     @State private var isLoading = true
     @State private var loadError: String?
     @State private var searchText = ""
-    @State private var customMintUrl = ""
     @State private var isAddingMint = false
     @State private var addedMints: Set<String> = []
     @State private var existingMints: Set<String> = []
@@ -26,12 +25,36 @@ struct MintBrowserView: View {
     @State private var mintToConfirm: MintListItem?
     @State private var showingTrustConfirmation = false
 
+    // Custom mint lookup state
+    @State private var customMint: MintListItem?
+    @State private var isLoadingCustomMint = false
+    @State private var customMintLookupTask: Task<Void, Never>?
+
+    private var searchIsUrl: Bool {
+        let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let url = URL(string: trimmed),
+              let scheme = url.scheme,
+              (scheme == "https" || scheme == "http"),
+              let host = url.host,
+              host.contains("."),
+              host.count > 4  // minimum like "a.bc"
+        else { return false }
+        return true
+    }
+
     private var filteredMints: [MintListItem] {
         if searchText.isEmpty {
             return mints
         }
+        // When searching by URL, only show custom mint result (handled separately)
+        if searchIsUrl {
+            return []
+        }
+        // Text search: match on name, description, or URL
         return mints.filter { mint in
-            mint.displayName.localizedCaseInsensitiveContains(searchText)
+            mint.displayName.localizedCaseInsensitiveContains(searchText) ||
+            mint.displayDescription?.localizedCaseInsensitiveContains(searchText) == true ||
+            mint.url.localizedCaseInsensitiveContains(searchText)
         }
     }
 
@@ -46,6 +69,9 @@ struct MintBrowserView: View {
         .task {
             await loadExistingMints()
             await loadMints()
+        }
+        .onChange(of: searchText) { newValue in
+            lookupCustomMint(url: newValue)
         }
         .alert("Error", isPresented: $showingError) {
             Button("OK") {}
@@ -131,8 +157,11 @@ struct MintBrowserView: View {
             HStack {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(.secondary)
-                TextField("Search mints...", text: $searchText)
+                TextField("Search or enter mint URL...", text: $searchText)
                     .textFieldStyle(PlainTextFieldStyle())
+                    .autocapitalization(.none)
+                    .keyboardType(.URL)
+                    .disableAutocorrection(true)
                 if !searchText.isEmpty {
                     Button(action: { searchText = "" }) {
                         Image(systemName: "xmark.circle.fill")
@@ -168,49 +197,65 @@ struct MintBrowserView: View {
                 Spacer()
             } else {
                 List {
-                    // Mint list section
                     Section {
-                        ForEach(filteredMints) { mint in
-                            let isAdded = existingMints.contains(mint.url) || addedMints.contains(mint.url)
-                            MintRowView(
-                                mint: mint,
-                                isAdded: isAdded,
-                                isAdding: isAddingMint,
-                                onTapToAdd: {
-                                    mintToConfirm = mint
-                                    showingTrustConfirmation = true
-                                },
-                                onMintAdded: { url in
-                                    addedMints.insert(url)
-                                    onMintAdded?(url)
-                                    if mode == .addMint {
-                                        dismiss()
+                        // Show custom mint result when searching by URL
+                        if searchIsUrl {
+                            if isLoadingCustomMint {
+                                HStack {
+                                    Spacer()
+                                    ProgressView()
+                                    Spacer()
+                                }
+                                .padding(.vertical, 8)
+                            } else if let mint = customMint {
+                                let isAdded = existingMints.contains(mint.url) || addedMints.contains(mint.url)
+                                MintRowView(
+                                    mint: mint,
+                                    isAdded: isAdded,
+                                    isAdding: isAddingMint,
+                                    onTapToAdd: {
+                                        mintToConfirm = mint
+                                        showingTrustConfirmation = true
+                                    },
+                                    onMintAdded: { url in
+                                        addedMints.insert(url)
+                                        onMintAdded?(url)
+                                        if mode == .addMint {
+                                            dismiss()
+                                        }
                                     }
+                                )
+                            } else {
+                                // No mint found at URL
+                                HStack {
+                                    Spacer()
+                                    Text("No mint found at this URL")
+                                        .foregroundColor(.secondary)
+                                    Spacer()
                                 }
-                            )
-                        }
-                    }
-
-                    // Custom mint section
-                    Section(header: Text("Custom Mint")) {
-                        HStack {
-                            TextField("https://mint.example.com", text: $customMintUrl)
-                                .textFieldStyle(PlainTextFieldStyle())
-                                .autocapitalization(.none)
-                                .keyboardType(.URL)
-                                .disabled(isAddingMint)
-
-                            Button(action: {
-                                Task {
-                                    await addMint(url: customMintUrl)
-                                    customMintUrl = ""
-                                }
-                            }) {
-                                Image(systemName: "plus.circle.fill")
-                                    .font(.title2)
-                                    .foregroundColor(isValidCustomUrl ? .orange : .gray)
+                                .padding(.vertical, 8)
                             }
-                            .disabled(!isValidCustomUrl || isAddingMint)
+                        } else {
+                            // Show filtered auditor mints
+                            ForEach(filteredMints) { mint in
+                                let isAdded = existingMints.contains(mint.url) || addedMints.contains(mint.url)
+                                MintRowView(
+                                    mint: mint,
+                                    isAdded: isAdded,
+                                    isAdding: isAddingMint,
+                                    onTapToAdd: {
+                                        mintToConfirm = mint
+                                        showingTrustConfirmation = true
+                                    },
+                                    onMintAdded: { url in
+                                        addedMints.insert(url)
+                                        onMintAdded?(url)
+                                        if mode == .addMint {
+                                            dismiss()
+                                        }
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -221,9 +266,48 @@ struct MintBrowserView: View {
 
     // MARK: - Helpers
 
-    private var isValidCustomUrl: Bool {
-        guard let url = URL(string: customMintUrl) else { return false }
-        return url.scheme == "https" || url.scheme == "http"
+    private func lookupCustomMint(url: String) {
+        // Cancel any pending lookup
+        customMintLookupTask?.cancel()
+        customMint = nil
+
+        let trimmed = url.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Only lookup if it looks like a valid URL with a proper domain
+        guard let parsedUrl = URL(string: trimmed),
+              let scheme = parsedUrl.scheme,
+              (scheme == "https" || scheme == "http"),
+              let host = parsedUrl.host,
+              host.contains("."),
+              host.count > 4 else {
+            isLoadingCustomMint = false
+            return
+        }
+
+        isLoadingCustomMint = true
+
+        // Debounce: wait 300ms before making the request
+        customMintLookupTask = Task {
+            try? await Task.sleep(nanoseconds: 300_000_000)
+
+            guard !Task.isCancelled else { return }
+
+            do {
+                let info = try await MintInfoService.shared.fetchMintInfo(mintUrl: trimmed)
+                guard !Task.isCancelled else { return }
+
+                await MainActor.run {
+                    customMint = MintListItem(url: trimmed, info: info)
+                    isLoadingCustomMint = false
+                }
+            } catch {
+                guard !Task.isCancelled else { return }
+                await MainActor.run {
+                    customMint = nil
+                    isLoadingCustomMint = false
+                }
+            }
+        }
     }
 
     private func loadExistingMints() async {

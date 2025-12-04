@@ -121,7 +121,7 @@ struct DepositSheetView: View {
 
                     Picker("Mint", selection: $selectedMintUrl) {
                         ForEach(availableMints, id: \.self) { mint in
-                            Text(URL(string: mint)?.host ?? mint)
+                            Text(walletManager.getMintDisplayName(for: mint))
                                 .tag(mint)
                         }
                     }
@@ -276,36 +276,22 @@ struct DepositSheetView: View {
     }
 
     private var completedView: some View {
-        VStack(spacing: 20) {
-            VStack(spacing: 16) {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(.green)
-                    .font(.system(size: 60))
+        VStack(spacing: 16) {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundColor(.green)
+                .font(.system(size: 60))
 
-                Text("Tokens Minted Successfully!")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
-
-                if let minted = mintedAmount {
-                    Text("Minted: ₿\(minted)")
-                        .font(.title3)
-                        .fontWeight(.medium)
-                        .foregroundColor(.orange)
-                }
-            }
-
-            Button("Done") {
-                dismiss()
-            }
-            .frame(maxWidth: .infinity)
-            .frame(height: 50)
-            .background(Color.orange)
-            .foregroundColor(.white)
-            .cornerRadius(12)
-            .font(.headline)
+            Text("Deposit Successful")
+                .font(.title2)
+                .fontWeight(.semibold)
+                .foregroundColor(.primary)
         }
         .padding(20)
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                dismiss()
+            }
+        }
     }
 
     private var canGenerateDeposit: Bool {

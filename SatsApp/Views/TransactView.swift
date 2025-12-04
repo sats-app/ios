@@ -393,7 +393,7 @@ struct TransactSheetView: View {
 
                     Picker("Mint", selection: $selectedMintUrl) {
                         ForEach(availableMints, id: \.self) { mint in
-                            Text(URL(string: mint)?.host ?? mint)
+                            Text(walletManager.getMintDisplayName(for: mint))
                                 .tag(mint)
                         }
                     }

@@ -37,25 +37,23 @@ struct MintInfoResponse: Codable {
 }
 
 /// Information about a specific NUT support level
+/// NUT responses vary widely - some have `supported: Bool`, others have `supported: [...]` array
+/// We just need to know the NUT exists, so we accept any valid JSON object
 struct NutInfo: Codable {
-    let supported: Bool?
     let disabled: Bool?
 
-    // NUT-specific fields can be added as needed
     init(from decoder: Decoder) throws {
-        // Handle both simple boolean and complex object responses
+        // Try to decode as a keyed container to get disabled flag
         if let container = try? decoder.container(keyedBy: CodingKeys.self) {
-            supported = try container.decodeIfPresent(Bool.self, forKey: .supported)
             disabled = try container.decodeIfPresent(Bool.self, forKey: .disabled)
         } else {
-            // Some nuts return just metadata without supported/disabled
-            supported = nil
             disabled = nil
         }
+        // Ignore all other fields - different NUTs have different structures
     }
 
     private enum CodingKeys: String, CodingKey {
-        case supported, disabled
+        case disabled
     }
 }
 

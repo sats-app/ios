@@ -55,7 +55,7 @@ The app follows MVVM pattern with SwiftUI:
 
 ## Key Dependencies
 
-- **Cashu/Bitcoin**: `cdk-swift` 0.14.1 (Cashu Development Kit) - provides MultiMintWallet and WalletSqliteDatabase
+- **Cashu/Bitcoin**: `cdk-swift` 0.14.2-rc.5 (Cashu Development Kit) - provides MultiMintWallet and WalletSqliteDatabase
 
 ## Development Notes
 

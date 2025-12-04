@@ -214,7 +214,7 @@ struct MintsDrawerView: View {
                     let balanceString = "₿" + (formatter.string(from: NSNumber(value: balance)) ?? "0")
 
                     return UIMintInfo(
-                        name: URL(string: url)?.host ?? "Unknown Mint",
+                        name: walletManager.getMintDisplayName(for: url),
                         url: url,
                         balance: balanceString
                     )
