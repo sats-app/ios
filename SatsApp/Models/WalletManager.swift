@@ -379,6 +379,58 @@ class WalletManager: ObservableObject {
         }
     }
 
+    // MARK: - Prepared Send (Two-Phase)
+
+    /// Prepares a send operation and returns the fee without executing
+    func prepareSendWithFee(mintUrl: String, amount: UInt64) async throws -> (PreparedSend, UInt64) {
+        guard let wallet = self.wallet else {
+            AppLogger.network.error("Wallet not available")
+            throw WalletError.walletNotInitialized
+        }
+
+        let mint = MintUrl(url: mintUrl)
+        let amountObj = Amount(value: amount)
+        let sendOptions = SendOptions(
+            memo: nil,
+            conditions: nil,
+            amountSplitTarget: SplitTarget.none,
+            sendKind: SendKind.onlineExact,
+            includeFee: false,
+            maxProofs: nil,
+            metadata: [:]
+        )
+        let options = MultiMintSendOptions(
+            allowTransfer: false,
+            maxTransferAmount: nil,
+            allowedMints: [],
+            excludedMints: [],
+            sendOptions: sendOptions
+        )
+
+        let preparedSend = try await wallet.prepareSend(mintUrl: mint, amount: amountObj, options: options)
+        let fee = preparedSend.fee().value
+        AppLogger.network.info("Prepared send for \(amount) sats with fee \(fee) sats")
+        return (preparedSend, fee)
+    }
+
+    /// Confirms a previously prepared send operation
+    func confirmPreparedSend(_ preparedSend: PreparedSend, memo: String?) async throws -> String {
+        let token = try await preparedSend.confirm(memo: memo)
+        let tokenString = token.encode()
+        AppLogger.network.info("Confirmed prepared send")
+        return tokenString
+    }
+
+    /// Cancels a prepared send (cleanup if user dismisses)
+    func cancelPreparedSend(_ preparedSend: PreparedSend) async {
+        do {
+            try await preparedSend.cancel()
+            AppLogger.network.info("Cancelled prepared send")
+        } catch {
+            AppLogger.network.debug("Failed to cancel prepared send: \(error.localizedDescription)")
+        }
+    }
+
     // MARK: - Token Operations (Send/Receive)
 
     func send(mintUrl: String, amount: UInt64, memo: String?) async throws -> String {

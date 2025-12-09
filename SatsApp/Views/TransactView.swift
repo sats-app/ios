@@ -52,6 +52,16 @@ enum TransactSheetData: Identifiable {
     }
 }
 
+/// Holds prepared send data for fee confirmation
+struct PreparedSendData {
+    let preparedSend: PreparedSend
+    let amount: UInt64
+    let fee: UInt64
+    let mintUrl: String
+
+    var total: UInt64 { amount + fee }
+}
+
 struct TransactView: View {
     @EnvironmentObject var walletManager: WalletManager
     @State private var amount: String = "0"
@@ -232,6 +242,9 @@ struct TransactSheetView: View {
     @State private var pollingTask: Task<Void, Never>?
     @State private var paymentSuccess = false
     @State private var paidAmount: UInt64 = 0
+    @State private var preparedSendData: PreparedSendData?
+    @State private var isPreparing: Bool = false
+    @State private var sentTotalAmount: UInt64 = 0  // Total amount sent including fee
     @Environment(\.presentationMode) var presentationMode
 
     /// Returns true if we're confirming a scanned payment (not entering amount)
@@ -291,6 +304,21 @@ struct TransactSheetView: View {
         }
         .onDisappear {
             pollingTask?.cancel()
+            // Cancel any prepared send when sheet is dismissed
+            if let prepared = preparedSendData {
+                Task {
+                    await walletManager.cancelPreparedSend(prepared.preparedSend)
+                }
+            }
+        }
+        .onChange(of: selectedMintUrl) { newMint in
+            guard !newMint.isEmpty else { return }
+            // Re-prepare when mint changes (for Cashu sends and payment requests without transport)
+            let shouldReprepare = (mode == .pay && !isPrefilledPayment) ||
+                                  (paymentRequestData?.hasActiveTransport == false)
+            if shouldReprepare {
+                reprepareWithMint(newMint)
+            }
         }
     }
 
@@ -364,8 +392,8 @@ struct TransactSheetView: View {
 
     private var paymentConfirmationView: some View {
         VStack(spacing: 20) {
-            // Header with icon
-            VStack(spacing: 12) {
+            // Header with icon and amount
+            VStack(spacing: 8) {
                 ZStack {
                     Circle()
                         .fill(Color.orange)
@@ -376,68 +404,68 @@ struct TransactSheetView: View {
                         .foregroundColor(.white)
                 }
 
-                Text(lightningInvoice != nil ? "Pay Lightning Invoice" : "Payment Request")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.orange)
-            }
-            .padding(.top, 20)
-
-            // Amount display
-            if let invoice = lightningInvoice {
-                Text(WalletManager.formatAmount(invoice.amount))
-                    .font(.system(size: 48, weight: .light))
-                    .foregroundColor(.primary)
-
-                // Fee display
-                HStack {
-                    Text("Network Fee")
-                        .foregroundColor(.secondary)
-                    Spacer()
-                    Text("+ \(WalletManager.formatAmount(invoice.feeReserve))")
-                        .foregroundColor(.secondary)
-                }
-                .font(.subheadline)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .background(Color.gray.opacity(0.1))
-                .cornerRadius(8)
-
-                // Total
-                HStack {
-                    Text("Total")
-                        .fontWeight(.medium)
-                    Spacer()
+                // Lightning invoice
+                if let invoice = lightningInvoice {
+                    // Show total amount
                     Text(WalletManager.formatAmount(invoice.amount + invoice.feeReserve))
-                        .fontWeight(.medium)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .background(Color.orange.opacity(0.1))
-                .cornerRadius(8)
-            } else if let request = paymentRequestData {
-                if let amount = request.amount {
-                    Text(WalletManager.formatAmount(amount))
                         .font(.system(size: 48, weight: .light))
                         .foregroundColor(.primary)
-                } else {
-                    Text("Amount not specified")
-                        .font(.title3)
-                        .foregroundColor(.secondary)
-                }
 
-                // Description (if present)
-                if let description = request.description, !description.isEmpty {
-                    Text(description)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                        .background(Color.gray.opacity(0.1))
-                        .cornerRadius(8)
+                    // Fee breakdown (only if fee > 0)
+                    if invoice.feeReserve > 0 {
+                        Text("\(WalletManager.formatAmount(invoice.amount)) + \(WalletManager.formatAmount(invoice.feeReserve)) Fee")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                // Payment request
+                else if let request = paymentRequestData {
+                    if let amount = request.amount {
+                        // Show total if prepared with fee, otherwise show amount
+                        if !request.hasActiveTransport, let prepared = preparedSendData {
+                            Text(WalletManager.formatAmount(prepared.total))
+                                .font(.system(size: 48, weight: .light))
+                                .foregroundColor(.primary)
+
+                            // Fee breakdown (only if fee > 0)
+                            if prepared.fee > 0 {
+                                Text("\(WalletManager.formatAmount(prepared.amount)) + \(WalletManager.formatAmount(prepared.fee)) Fee")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            }
+                        } else if !request.hasActiveTransport && isPreparing {
+                            Text(WalletManager.formatAmount(amount))
+                                .font(.system(size: 48, weight: .light))
+                                .foregroundColor(.primary)
+
+                            HStack(spacing: 4) {
+                                Text("Calculating fee")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                                ProgressView()
+                                    .scaleEffect(0.6)
+                            }
+                        } else {
+                            Text(WalletManager.formatAmount(amount))
+                                .font(.system(size: 48, weight: .light))
+                                .foregroundColor(.primary)
+                        }
+                    } else {
+                        Text("Amount not specified")
+                            .font(.title3)
+                            .foregroundColor(.secondary)
+                    }
+
+                    // Description (if present)
+                    if let description = request.description, !description.isEmpty {
+                        Text(description)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
                 }
             }
+            .padding(.top, 20)
 
             // Mint selector
             if isLoadingMints {
@@ -536,10 +564,18 @@ struct TransactSheetView: View {
                         .foregroundColor(Color.white)
                 }
 
-                Text("\(mode == .pay ? "Pay" : "Request") \u{20BF}\(displayAmount)")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                    .foregroundColor(Color.orange)
+                // Show total amount for pay mode, input amount for request mode
+                if mode == .pay && sentTotalAmount > 0 {
+                    Text("Pay \(WalletManager.formatAmount(sentTotalAmount))")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                        .foregroundColor(Color.orange)
+                } else {
+                    Text("\(mode == .pay ? "Pay" : "Request") \u{20BF}\(displayAmount)")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                        .foregroundColor(Color.orange)
+                }
             }
             .padding(.top, 16)
 
@@ -632,7 +668,7 @@ struct TransactSheetView: View {
     private var inputFormView: some View {
         VStack(spacing: 20) {
             // Header section
-            VStack(spacing: 16) {
+            VStack(spacing: 8) {
                 ZStack {
                     Circle()
                         .fill(Color.orange)
@@ -642,11 +678,41 @@ struct TransactSheetView: View {
                         .font(.title)
                         .foregroundColor(Color.white)
                 }
+                .padding(.bottom, 8)
 
-                Text("\(mode == .pay ? "Pay" : "Request") \u{20BF}\(displayAmount)")
-                    .font(.title2)
-                    .bold()
-                    .foregroundColor(Color.orange)
+                // Show total if prepared, otherwise show amount
+                if mode == .pay, let prepared = preparedSendData {
+                    Text("Pay \(WalletManager.formatAmount(prepared.total))")
+                        .font(.title2)
+                        .bold()
+                        .foregroundColor(Color.orange)
+
+                    // Sub-header showing breakdown (only if fee > 0)
+                    if prepared.fee > 0 {
+                        Text("\(WalletManager.formatAmount(prepared.amount)) + \(WalletManager.formatAmount(prepared.fee)) Fee")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                } else if mode == .pay && isPreparing {
+                    Text("Pay \u{20BF}\(displayAmount)")
+                        .font(.title2)
+                        .bold()
+                        .foregroundColor(Color.orange)
+
+                    // Loading indicator for fee
+                    HStack(spacing: 4) {
+                        Text("Calculating fee")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        ProgressView()
+                            .scaleEffect(0.6)
+                    }
+                } else {
+                    Text("\(mode == .pay ? "Pay" : "Request") \u{20BF}\(displayAmount)")
+                        .font(.title2)
+                        .bold()
+                        .foregroundColor(Color.orange)
+                }
             }
             .padding(.top, 20)
 
@@ -774,6 +840,92 @@ struct TransactSheetView: View {
             }
             self.isLoadingMints = false
         }
+
+        // Auto-prepare for Cashu sends after mints are loaded
+        if mode == .pay && !isPrefilledPayment {
+            if let firstMint = mints.first {
+                await prepareSend(mintUrl: firstMint)
+            }
+        }
+
+        // Auto-prepare for payment requests (no transport)
+        if let request = paymentRequestData, !request.hasActiveTransport {
+            if let firstMint = mints.first, let amount = request.amount {
+                await prepareSendForPaymentRequest(mintUrl: firstMint, amount: amount)
+            }
+        }
+    }
+
+    /// Prepares a send operation to calculate fees
+    private func prepareSend(mintUrl: String) async {
+        guard let amountValue = UInt64(displayAmount), amountValue > 0 else { return }
+
+        await MainActor.run {
+            isPreparing = true
+        }
+
+        do {
+            let (prepared, fee) = try await walletManager.prepareSendWithFee(mintUrl: mintUrl, amount: amountValue)
+            await MainActor.run {
+                self.preparedSendData = PreparedSendData(
+                    preparedSend: prepared,
+                    amount: amountValue,
+                    fee: fee,
+                    mintUrl: mintUrl
+                )
+                self.isPreparing = false
+            }
+        } catch {
+            await MainActor.run {
+                self.isPreparing = false
+                AppLogger.network.error("Failed to prepare send: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    /// Prepares a send for payment request with specific amount
+    private func prepareSendForPaymentRequest(mintUrl: String, amount: UInt64) async {
+        await MainActor.run {
+            isPreparing = true
+        }
+
+        do {
+            let (prepared, fee) = try await walletManager.prepareSendWithFee(mintUrl: mintUrl, amount: amount)
+            await MainActor.run {
+                self.preparedSendData = PreparedSendData(
+                    preparedSend: prepared,
+                    amount: amount,
+                    fee: fee,
+                    mintUrl: mintUrl
+                )
+                self.isPreparing = false
+            }
+        } catch {
+            await MainActor.run {
+                self.isPreparing = false
+                AppLogger.network.error("Failed to prepare send for payment request: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    /// Cancels current prepared send and prepares a new one with the given mint
+    private func reprepareWithMint(_ mintUrl: String) {
+        // Cancel existing prepared send
+        if let existing = preparedSendData {
+            Task {
+                await walletManager.cancelPreparedSend(existing.preparedSend)
+            }
+            preparedSendData = nil
+        }
+
+        // Prepare new send
+        Task {
+            if let request = paymentRequestData, !request.hasActiveTransport, let amount = request.amount {
+                await prepareSendForPaymentRequest(mintUrl: mintUrl, amount: amount)
+            } else if mode == .pay && !isPrefilledPayment {
+                await prepareSend(mintUrl: mintUrl)
+            }
+        }
     }
 
     private func showError(_ message: String) {
@@ -805,14 +957,31 @@ struct TransactSheetView: View {
                         return
                     }
 
-                    let token = try await walletManager.send(
-                        mintUrl: selectedMintUrl,
-                        amount: amountValue,
-                        memo: memo.isEmpty ? nil : memo
-                    )
+                    let token: String
+                    let totalAmount: UInt64
+                    if let prepared = preparedSendData, prepared.mintUrl == selectedMintUrl {
+                        // Use prepared send
+                        token = try await walletManager.confirmPreparedSend(
+                            prepared.preparedSend,
+                            memo: memo.isEmpty ? nil : memo
+                        )
+                        totalAmount = prepared.total
+                        await MainActor.run {
+                            self.preparedSendData = nil
+                        }
+                    } else {
+                        // Fallback to direct send if not prepared
+                        token = try await walletManager.send(
+                            mintUrl: selectedMintUrl,
+                            amount: amountValue,
+                            memo: memo.isEmpty ? nil : memo
+                        )
+                        totalAmount = amountValue
+                    }
 
                     await MainActor.run {
                         generatedContent = token
+                        sentTotalAmount = totalAmount
                         isLoading = false
                         showQRResult = true
                     }
@@ -893,15 +1062,32 @@ struct TransactSheetView: View {
                         }
                     } else {
                         // "none" transport - generate token and show QR code for manual delivery
-                        let token = try await walletManager.send(
-                            mintUrl: selectedMintUrl,
-                            amount: paymentAmount,
-                            memo: request.description
-                        )
+                        let token: String
+                        let totalAmount: UInt64
+                        if let prepared = preparedSendData, prepared.mintUrl == selectedMintUrl {
+                            // Use prepared send
+                            token = try await walletManager.confirmPreparedSend(
+                                prepared.preparedSend,
+                                memo: request.description
+                            )
+                            totalAmount = prepared.total
+                            await MainActor.run {
+                                self.preparedSendData = nil
+                            }
+                        } else {
+                            // Fallback to direct send if not prepared
+                            token = try await walletManager.send(
+                                mintUrl: selectedMintUrl,
+                                amount: paymentAmount,
+                                memo: request.description
+                            )
+                            totalAmount = paymentAmount
+                        }
 
                         await MainActor.run {
                             walletManager.refreshBalance()
                             generatedContent = token
+                            sentTotalAmount = totalAmount
                             isLoading = false
                             showQRResult = true
                         }

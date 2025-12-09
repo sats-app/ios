@@ -352,16 +352,8 @@ struct QRScannerView: View {
     // MARK: - Scan Frame Overlay
 
     private var scanFrameOverlay: some View {
-        ZStack {
-            // Outer rounded rectangle stroke
-            RoundedRectangle(cornerRadius: 20)
-                .stroke(Color.orange, lineWidth: 3)
-                .frame(width: 280, height: 280)
-
-            // Corner accents
-            ScannerCornersView()
-                .frame(width: 280, height: 280)
-        }
+        ScannerCornersView()
+            .frame(width: 260, height: 260)
     }
 
     // MARK: - Status Text
@@ -371,7 +363,7 @@ struct QRScannerView: View {
         Group {
             switch state {
             case .scanning:
-                Text("Point camera at a QR code")
+                EmptyView()
             case .urProgress(let progress):
                 Text("Scanning animated QR: \(Int(progress * 100))%")
             case .processingBolt11:
@@ -742,42 +734,44 @@ struct QRScannerView: View {
 // MARK: - Scanner Corners View
 
 struct ScannerCornersView: View {
-    let cornerLength: CGFloat = 30
-    let lineWidth: CGFloat = 4
+    let cornerLength: CGFloat = 25
+    let lineWidth: CGFloat = 5
 
     var body: some View {
         GeometryReader { geo in
+            let offset = lineWidth / 2
+
             // Top-left
             Path { path in
-                path.move(to: CGPoint(x: 0, y: cornerLength))
-                path.addLine(to: CGPoint(x: 0, y: 0))
-                path.addLine(to: CGPoint(x: cornerLength, y: 0))
+                path.move(to: CGPoint(x: offset, y: cornerLength))
+                path.addLine(to: CGPoint(x: offset, y: offset))
+                path.addLine(to: CGPoint(x: cornerLength, y: offset))
             }
-            .stroke(Color.orange, lineWidth: lineWidth)
+            .stroke(Color.orange, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
 
             // Top-right
             Path { path in
-                path.move(to: CGPoint(x: geo.size.width - cornerLength, y: 0))
-                path.addLine(to: CGPoint(x: geo.size.width, y: 0))
-                path.addLine(to: CGPoint(x: geo.size.width, y: cornerLength))
+                path.move(to: CGPoint(x: geo.size.width - cornerLength, y: offset))
+                path.addLine(to: CGPoint(x: geo.size.width - offset, y: offset))
+                path.addLine(to: CGPoint(x: geo.size.width - offset, y: cornerLength))
             }
-            .stroke(Color.orange, lineWidth: lineWidth)
+            .stroke(Color.orange, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
 
             // Bottom-left
             Path { path in
-                path.move(to: CGPoint(x: 0, y: geo.size.height - cornerLength))
-                path.addLine(to: CGPoint(x: 0, y: geo.size.height))
-                path.addLine(to: CGPoint(x: cornerLength, y: geo.size.height))
+                path.move(to: CGPoint(x: offset, y: geo.size.height - cornerLength))
+                path.addLine(to: CGPoint(x: offset, y: geo.size.height - offset))
+                path.addLine(to: CGPoint(x: cornerLength, y: geo.size.height - offset))
             }
-            .stroke(Color.orange, lineWidth: lineWidth)
+            .stroke(Color.orange, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
 
             // Bottom-right
             Path { path in
-                path.move(to: CGPoint(x: geo.size.width - cornerLength, y: geo.size.height))
-                path.addLine(to: CGPoint(x: geo.size.width, y: geo.size.height))
-                path.addLine(to: CGPoint(x: geo.size.width, y: geo.size.height - cornerLength))
+                path.move(to: CGPoint(x: geo.size.width - cornerLength, y: geo.size.height - offset))
+                path.addLine(to: CGPoint(x: geo.size.width - offset, y: geo.size.height - offset))
+                path.addLine(to: CGPoint(x: geo.size.width - offset, y: geo.size.height - cornerLength))
             }
-            .stroke(Color.orange, lineWidth: lineWidth)
+            .stroke(Color.orange, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
         }
     }
 }
