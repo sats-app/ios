@@ -229,6 +229,7 @@ struct TransactSheetView: View {
     @EnvironmentObject var walletManager: WalletManager
     @State private var selectedMintUrl: String = ""
     @State private var availableMints: [String] = []
+    @State private var mintBalances: [String: UInt64] = [:]
     @State private var isLoadingMints = true
     @State private var memo: String = ""
     @State private var isViewableByRecipient: Bool = false
@@ -270,6 +271,36 @@ struct TransactSheetView: View {
     /// Mode derived from sheet data
     private var mode: TransactMode {
         sheetData.mode
+    }
+
+    /// Returns true if the selected mint has insufficient balance for the payment
+    private var hasInsufficientBalance: Bool {
+        guard !selectedMintUrl.isEmpty else { return false }
+
+        let selectedBalance = mintBalances[selectedMintUrl] ?? 0
+        let requiredAmount: UInt64
+
+        if let invoice = lightningInvoice {
+            requiredAmount = invoice.amount + invoice.feeReserve
+        } else if let request = paymentRequestData, let amount = request.amount {
+            // For payment requests without transport, include prepared fee if available
+            if let prepared = preparedSendData {
+                requiredAmount = prepared.total
+            } else {
+                requiredAmount = amount
+            }
+        } else if let amountValue = UInt64(displayAmount), amountValue > 0 {
+            // For manual sends, include prepared fee if available
+            if let prepared = preparedSendData {
+                requiredAmount = prepared.total
+            } else {
+                requiredAmount = amountValue
+            }
+        } else {
+            return false
+        }
+
+        return selectedBalance < requiredAmount
     }
 
     var body: some View {
@@ -483,7 +514,7 @@ struct TransactSheetView: View {
 
                     Picker("Pay from", selection: $selectedMintUrl) {
                         ForEach(availableMints, id: \.self) { mint in
-                            Text(walletManager.getMintDisplayName(for: mint))
+                            Text("\(walletManager.getMintDisplayName(for: mint)) (\(WalletManager.formatAmount(mintBalances[mint] ?? 0)))")
                                 .tag(mint)
                         }
                     }
@@ -516,7 +547,7 @@ struct TransactSheetView: View {
                 .foregroundColor(.white)
                 .cornerRadius(12)
                 .font(.headline)
-                .disabled(isLoading || availableMints.isEmpty || (paymentRequestData?.amount == nil && lightningInvoice == nil))
+                .disabled(isLoading || availableMints.isEmpty || hasInsufficientBalance || (paymentRequestData?.amount == nil && lightningInvoice == nil))
 
                 Button("Cancel") {
                     presentationMode.wrappedValue.dismiss()
@@ -733,7 +764,7 @@ struct TransactSheetView: View {
 
                         Picker("Mint", selection: $selectedMintUrl) {
                             ForEach(availableMints, id: \.self) { mint in
-                                Text(walletManager.getMintDisplayName(for: mint))
+                                Text("\(walletManager.getMintDisplayName(for: mint)) (\(WalletManager.formatAmount(mintBalances[mint] ?? 0)))")
                                     .tag(mint)
                             }
                         }
@@ -811,7 +842,7 @@ struct TransactSheetView: View {
             .foregroundColor(.white)
             .cornerRadius(12)
             .font(.headline)
-            .disabled(isLoading)
+            .disabled(isLoading || (mode == .pay && hasInsufficientBalance))
             .padding(.bottom, 30)
         }
         .padding(.horizontal, 20)
@@ -833,10 +864,40 @@ struct TransactSheetView: View {
         isLoadingMints = true
 
         let mints = await walletManager.getMints()
+
+        // Load balances for each mint
+        var balances: [String: UInt64] = [:]
+        if let fetchedBalances = try? await walletManager.getMintBalances() {
+            balances = fetchedBalances
+        }
+
+        // Determine required amount for payment (if applicable)
+        let requiredAmount: UInt64? = {
+            if let invoice = lightningInvoice {
+                return invoice.amount + invoice.feeReserve
+            } else if let request = paymentRequestData, let amount = request.amount {
+                return amount
+            }
+            return nil
+        }()
+
         await MainActor.run {
             self.availableMints = mints
+            self.mintBalances = balances
+
+            // Auto-select a mint with sufficient balance if possible
             if !mints.isEmpty && selectedMintUrl.isEmpty {
-                self.selectedMintUrl = mints[0]
+                if let required = requiredAmount {
+                    // Find first mint with sufficient balance
+                    if let mintWithFunds = mints.first(where: { (balances[$0] ?? 0) >= required }) {
+                        self.selectedMintUrl = mintWithFunds
+                    } else {
+                        // No mint has sufficient funds, select first anyway
+                        self.selectedMintUrl = mints[0]
+                    }
+                } else {
+                    self.selectedMintUrl = mints[0]
+                }
             }
             self.isLoadingMints = false
         }
