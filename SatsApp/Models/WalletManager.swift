@@ -461,6 +461,61 @@ class WalletManager: ObservableObject {
         }
     }
 
+    // MARK: - Payment Requests (NUT-18)
+
+    func createPaymentRequest(amount: UInt64?, unit: String = "sat", description: String?) async throws -> String {
+        guard let wallet = self.wallet else {
+            AppLogger.network.error("Wallet not available")
+            throw WalletError.walletNotInitialized
+        }
+
+        do {
+            let params = CreateRequestParams(
+                amount: amount,
+                unit: unit,
+                description: description,
+                pubkeys: nil,
+                numSigs: 1,
+                hash: nil,
+                preimage: nil,
+                transport: "none",
+                httpUrl: nil,
+                nostrRelays: nil
+            )
+
+            let result = try await wallet.createRequest(params: params)
+            let encoded = result.paymentRequest.toStringEncoded()
+            AppLogger.network.info("Created payment request for \(amount ?? 0) sats")
+            return encoded
+        } catch {
+            AppLogger.network.error("Failed to create payment request: \(error.localizedDescription)")
+            throw error
+        }
+    }
+
+    func payPaymentRequest(paymentRequest: PaymentRequest, mintUrl: String, amount: UInt64?) async throws {
+        guard let multiMintWallet = self.wallet else {
+            AppLogger.network.error("Wallet not available")
+            throw WalletError.walletNotInitialized
+        }
+
+        do {
+            // Get the single-mint wallet for the specified mint
+            let mint = MintUrl(url: mintUrl)
+            guard let singleWallet = await multiMintWallet.getWallet(mintUrl: mint) else {
+                AppLogger.network.error("Wallet not found for mint: \(mintUrl)")
+                throw WalletError.walletNotInitialized
+            }
+
+            let customAmount = amount.map { Amount(value: $0) }
+            try await singleWallet.payRequest(paymentRequest: paymentRequest, customAmount: customAmount)
+            AppLogger.network.info("Successfully paid payment request")
+        } catch {
+            AppLogger.network.error("Failed to pay request: \(error.localizedDescription)")
+            throw error
+        }
+    }
+
     // MARK: - Proof State Checking
 
     /// Checks if the proofs in a token have been spent (claimed by recipient)

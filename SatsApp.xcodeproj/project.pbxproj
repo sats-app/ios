@@ -488,7 +488,7 @@
 			repositoryURL = "https://github.com/cashubtc/cdk-swift";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 0.14.2-rc.5;
+				minimumVersion = 0.14.2;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */

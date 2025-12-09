@@ -118,7 +118,7 @@ run:
     echo "Press Ctrl+C to stop"
     echo "----------------------------------------"
     
-    /usr/bin/log stream --level debug --predicate 'subsystem == "{{bundle_id}}"' --style compact
+    /usr/bin/log stream --level debug --debug --predicate 'subsystem == "{{bundle_id}}"' --style compact
 
 # Run on specific simulator by name
 run-on device: 
@@ -152,7 +152,7 @@ run-on device:
 
 # Stream app logs in real-time
 logs:
-    /usr/bin/log stream --level debug --predicate 'subsystem == "{{bundle_id}}"' --style compact
+    /usr/bin/log stream --level debug --debug --predicate 'subsystem == "{{bundle_id}}"' --style compact
 
 # Quick rebuild and run (skips some checks for faster iteration)
 quick:

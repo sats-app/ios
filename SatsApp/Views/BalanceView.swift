@@ -81,10 +81,18 @@ struct BalanceToolbarModifier: ViewModifier {
 
 extension View {
     func adaptiveSheet<Content: View>(
-        isPresent: Binding<Bool>, 
+        isPresent: Binding<Bool>,
         @ViewBuilder sheetContent: () -> Content
     ) -> some View {
         modifier(AdaptiveSheetModifier(isPresented: isPresent, sheetContent: sheetContent()))
+    }
+
+    /// Item-based adaptive sheet that evaluates content when item becomes non-nil
+    func adaptiveSheet<Item: Identifiable, Content: View>(
+        item: Binding<Item?>,
+        @ViewBuilder sheetContent: @escaping (Item) -> Content
+    ) -> some View {
+        modifier(AdaptiveSheetItemModifier(item: item, sheetContent: sheetContent))
     }
 }
 
@@ -97,6 +105,34 @@ struct AdaptiveSheetModifier<SheetContent: View>: ViewModifier {
         content
             .sheet(isPresented: $isPresented) {
                 sheetContent
+                    .background(
+                        GeometryReader { proxy in
+                            Color.clear
+                                .onAppear {
+                                    subHeight = proxy.size.height
+                                }
+                                .onChange(of: proxy.size.height) { newHeight in
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        subHeight = newHeight
+                                    }
+                                }
+                        }
+                    )
+                    .presentationDetents([.height(subHeight)])
+                    .presentationDragIndicator(.visible)
+            }
+    }
+}
+
+struct AdaptiveSheetItemModifier<Item: Identifiable, SheetContent: View>: ViewModifier {
+    @Binding var item: Item?
+    @State private var subHeight: CGFloat = 400
+    var sheetContent: (Item) -> SheetContent
+
+    func body(content: Content) -> some View {
+        content
+            .sheet(item: $item) { presentedItem in
+                sheetContent(presentedItem)
                     .background(
                         GeometryReader { proxy in
                             Color.clear

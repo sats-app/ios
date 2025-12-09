@@ -12,7 +12,7 @@ enum ScannerState: Equatable {
     case urProgress(Double)
     case processingBolt11(String)
     case processingToken(String)
-    case confirmPayment(PaymentDetails)
+    case processingPaymentRequest(String)
     case untrustedMint(TokenDetails)
     case success(SuccessType)
     case error(String)
@@ -27,8 +27,8 @@ enum ScannerState: Equatable {
             return l == r
         case (.processingToken(let l), .processingToken(let r)):
             return l == r
-        case (.confirmPayment(let l), .confirmPayment(let r)):
-            return l.invoice == r.invoice
+        case (.processingPaymentRequest(let l), .processingPaymentRequest(let r)):
+            return l == r
         case (.untrustedMint(let l), .untrustedMint(let r)):
             return l.mintUrl == r.mintUrl
         case (.success(let l), .success(let r)):
@@ -46,19 +46,31 @@ enum SuccessType: Equatable {
     case tokenReceived(amount: UInt64)
 }
 
-struct PaymentDetails {
-    let invoice: String
-    let amount: UInt64
-    let feeReserve: UInt64
-    let quoteId: String
-    let availableMints: [String]
-    var selectedMint: String
-}
-
 struct TokenDetails {
     let tokenString: String
     let mintUrl: String
     let amount: UInt64
+}
+
+// MARK: - Callback Data Types
+
+/// Data passed when a Lightning invoice is scanned
+struct LightningInvoiceData {
+    let invoice: String
+    let amount: UInt64
+    let feeReserve: UInt64
+    let quoteId: String
+    let mintUrl: String
+}
+
+/// Data passed when a NUT-18 payment request is scanned
+struct ScannedPaymentRequestData {
+    let paymentRequest: PaymentRequest
+    let encodedRequest: String
+    let amount: UInt64?
+    let description: String?
+    /// True if request has HTTP or Nostr transport for automatic delivery
+    let hasActiveTransport: Bool
 }
 
 // MARK: - Camera Scanner Controller
@@ -220,13 +232,18 @@ struct QRScannerView: View {
     /// Callback when a cashu token is successfully received
     var onTokenReceived: ((UInt64) -> Void)?
 
+    /// Callback when a Lightning invoice is scanned (for payment)
+    var onLightningInvoiceScanned: ((LightningInvoiceData) -> Void)?
+
+    /// Callback when a NUT-18 payment request is scanned (for payment)
+    var onPaymentRequestScanned: ((ScannedPaymentRequestData) -> Void)?
+
     // Camera scanner controller - manages AVFoundation and URScanState
     @StateObject private var cameraController = CameraScannerController()
 
     @State private var state: ScannerState = .scanning
     @State private var showingResultSheet = false
     @State private var showingTrustAlert = false
-    @State private var paymentDetails: PaymentDetails?
     @State private var tokenDetails: TokenDetails?
     @State private var cancellables = Set<AnyCancellable>()
 
@@ -400,21 +417,10 @@ struct QRScannerView: View {
     @ViewBuilder
     private var resultSheetContent: some View {
         if case .success(.paymentSent(let amount)) = state {
-            // Payment success stays in scanner context
+            // Payment success (legacy - new flow uses TransactView)
             SuccessView(successType: .paymentSent(amount: amount)) {
                 dismiss()
             }
-        } else if case .confirmPayment(_) = state, let payment = paymentDetails {
-            PaymentConfirmationView(
-                paymentDetails: payment,
-                onPaymentComplete: { amount in
-                    state = .success(.paymentSent(amount: amount))
-                },
-                onCancel: {
-                    showingResultSheet = false
-                    resetScanner()
-                }
-            )
         }
     }
 
@@ -455,17 +461,12 @@ struct QRScannerView: View {
         case .ur(let ur):
             // Decode UR payload (bytes type contains the actual content)
             if ur.type == "bytes" {
-                do {
-                    let cbor = ur.cbor
-                    // Extract bytes from CBOR
-                    if case CBOR.bytes(let data) = cbor {
-                        if let content = String(data: Data(data), encoding: .utf8) {
-                            handleScannedContent(content)
-                        }
+                let cbor = ur.cbor
+                // Extract bytes from CBOR
+                if case CBOR.bytes(let data) = cbor {
+                    if let content = String(data: Data(data), encoding: .utf8) {
+                        handleScannedContent(content)
                     }
-                } catch {
-                    AppLogger.ui.error("Failed to decode UR: \(error.localizedDescription)")
-                    state = .error("Failed to decode QR code")
                 }
             } else {
                 AppLogger.ui.debug("Unsupported UR type: \(ur.type)")
@@ -504,6 +505,10 @@ struct QRScannerView: View {
         else if lowercased.hasPrefix("cashu") {
             processCashuToken(trimmed)
         }
+        // Check for NUT-18 Payment Request (creqA prefix)
+        else if lowercased.hasPrefix("creq") {
+            processPaymentRequest(trimmed)
+        }
         // Unknown format
         else {
             AppLogger.ui.debug("Unknown QR content: \(trimmed.prefix(50))...")
@@ -537,17 +542,15 @@ struct QRScannerView: View {
                 )
 
                 await MainActor.run {
-                    let details = PaymentDetails(
+                    let data = LightningInvoiceData(
                         invoice: invoice,
                         amount: amount,
                         feeReserve: feeReserve,
                         quoteId: quoteId,
-                        availableMints: mints,
-                        selectedMint: firstMint
+                        mintUrl: firstMint
                     )
-                    paymentDetails = details
-                    state = .confirmPayment(details)
-                    showingResultSheet = true
+                    onLightningInvoiceScanned?(data)
+                    dismiss()
                 }
             } catch {
                 await MainActor.run {
@@ -642,6 +645,53 @@ struct QRScannerView: View {
         }
     }
 
+    // MARK: - Payment Request Processing
+
+    private func processPaymentRequest(_ encoded: String) {
+        state = .processingPaymentRequest(encoded)
+        cameraController.stopRunning()
+
+        Task {
+            do {
+                // Decode the payment request
+                let paymentRequest = try PaymentRequest.fromString(encoded: encoded)
+
+                // Extract amount - Amount is a struct with a value property
+                let amountObj = paymentRequest.amount()
+                let amount: UInt64? = amountObj?.value
+                AppLogger.ui.info("Payment request amount object: \(String(describing: amountObj)), value: \(String(describing: amount))")
+
+                let description = paymentRequest.description()
+
+                // Check for active transports (HTTP or Nostr)
+                let transports = paymentRequest.transports()
+                let hasActiveTransport = transports.contains { transport in
+                    transport.transportType == .httpPost || transport.transportType == .nostr
+                }
+                AppLogger.ui.info("Payment request transports: \(transports.count), hasActiveTransport: \(hasActiveTransport)")
+
+                await MainActor.run {
+                    let data = ScannedPaymentRequestData(
+                        paymentRequest: paymentRequest,
+                        encodedRequest: encoded,
+                        amount: amount,
+                        description: description,
+                        hasActiveTransport: hasActiveTransport
+                    )
+                    onPaymentRequestScanned?(data)
+                    dismiss()
+                }
+            } catch {
+                await MainActor.run {
+                    state = .error("Invalid payment request: \(error.localizedDescription)")
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                        resetScanner()
+                    }
+                }
+            }
+        }
+    }
+
     // MARK: - State Change Handler
 
     private func handleStateChange(_ newState: ScannerState) {
@@ -665,11 +715,11 @@ struct QRScannerView: View {
         let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         // Check if clipboard contains valid scannable content
         if trimmed.hasPrefix("lnbc") || trimmed.hasPrefix("lntb") || trimmed.hasPrefix("lnbcrt") ||
-           trimmed.hasPrefix("lightning:") || trimmed.hasPrefix("cashu") {
+           trimmed.hasPrefix("lightning:") || trimmed.hasPrefix("cashu") || trimmed.hasPrefix("creq") {
             cameraController.stopRunning()
             handleScannedContent(content)
         } else {
-            state = .error("No valid invoice or token in clipboard")
+            state = .error("No valid invoice, token, or request in clipboard")
             DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
                 if case .error = state {
                     state = .scanning
@@ -682,7 +732,6 @@ struct QRScannerView: View {
 
     private func resetScanner() {
         state = .scanning
-        paymentDetails = nil
         tokenDetails = nil
         cameraController.scanState.restart()
         cameraController.resetScanningState()
@@ -797,168 +846,6 @@ struct SuccessView: View {
             // Auto-dismiss after delay
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
                 onDismiss()
-            }
-        }
-    }
-}
-
-// MARK: - Payment Confirmation View
-
-struct PaymentConfirmationView: View {
-    @EnvironmentObject var walletManager: WalletManager
-
-    let paymentDetails: PaymentDetails
-    var onPaymentComplete: ((UInt64) -> Void)?
-    var onCancel: (() -> Void)?
-
-    @State private var selectedMint: String
-    @State private var isProcessing = false
-    @State private var showingError = false
-    @State private var errorMessage = ""
-
-    init(paymentDetails: PaymentDetails, onPaymentComplete: ((UInt64) -> Void)? = nil, onCancel: (() -> Void)? = nil) {
-        self.paymentDetails = paymentDetails
-        self.onPaymentComplete = onPaymentComplete
-        self.onCancel = onCancel
-        _selectedMint = State(initialValue: paymentDetails.selectedMint)
-    }
-
-    var body: some View {
-        VStack(spacing: 20) {
-            // Header with icon
-            VStack(spacing: 12) {
-                ZStack {
-                    Circle()
-                        .fill(Color.orange)
-                        .frame(width: 60, height: 60)
-
-                    Image(systemName: "bolt.fill")
-                        .font(.title)
-                        .foregroundColor(.white)
-                }
-
-                Text("Pay Lightning Invoice")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.orange)
-            }
-            .padding(.top, 20)
-
-            // Amount display
-            Text(WalletManager.formatAmount(paymentDetails.amount))
-                .font(.system(size: 48, weight: .light))
-                .foregroundColor(.primary)
-
-            // Fee display
-            HStack {
-                Text("Network Fee")
-                    .foregroundColor(.secondary)
-                Spacer()
-                Text("+ \(WalletManager.formatAmount(paymentDetails.feeReserve))")
-                    .foregroundColor(.secondary)
-            }
-            .font(.subheadline)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(Color.gray.opacity(0.1))
-            .cornerRadius(8)
-
-            // Total
-            HStack {
-                Text("Total")
-                    .fontWeight(.medium)
-                Spacer()
-                Text(WalletManager.formatAmount(paymentDetails.amount + paymentDetails.feeReserve))
-                    .fontWeight(.medium)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(Color.orange.opacity(0.1))
-            .cornerRadius(8)
-
-            // Mint selector
-            HStack {
-                Image(systemName: "building.columns")
-                    .foregroundColor(.orange)
-                    .font(.subheadline)
-
-                Picker("Mint", selection: $selectedMint) {
-                    ForEach(paymentDetails.availableMints, id: \.self) { mint in
-                        Text(URL(string: mint)?.host ?? mint)
-                            .tag(mint)
-                    }
-                }
-                .pickerStyle(MenuPickerStyle())
-                .tint(.primary)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .background(Color.gray.opacity(0.1))
-            .cornerRadius(8)
-
-            Spacer()
-
-            // Buttons
-            VStack(spacing: 12) {
-                Button(action: executePayment) {
-                    HStack {
-                        if isProcessing {
-                            ProgressView()
-                                .scaleEffect(0.8)
-                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                        }
-                        Text(isProcessing ? "Processing..." : "Confirm Payment")
-                    }
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: 50)
-                .background(Color.orange)
-                .foregroundColor(.white)
-                .cornerRadius(12)
-                .font(.headline)
-                .disabled(isProcessing)
-
-                Button("Cancel") {
-                    onCancel?()
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: 50)
-                .background(Color.gray.opacity(0.1))
-                .foregroundColor(.primary)
-                .cornerRadius(12)
-                .font(.headline)
-                .disabled(isProcessing)
-            }
-            .padding(.bottom, 30)
-        }
-        .padding(.horizontal, 20)
-        .alert("Error", isPresented: $showingError) {
-            Button("OK") {}
-        } message: {
-            Text(errorMessage)
-        }
-    }
-
-    private func executePayment() {
-        isProcessing = true
-
-        Task {
-            do {
-                let (amount, _) = try await walletManager.meltTokens(
-                    mintUrl: selectedMint,
-                    invoice: paymentDetails.invoice
-                )
-
-                await MainActor.run {
-                    walletManager.refreshBalance()
-                    onPaymentComplete?(amount)
-                }
-            } catch {
-                await MainActor.run {
-                    errorMessage = error.localizedDescription
-                    showingError = true
-                    isProcessing = false
-                }
             }
         }
     }
