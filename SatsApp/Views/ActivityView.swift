@@ -4,7 +4,12 @@ struct ActivityView: View {
     @EnvironmentObject var walletManager: WalletManager
     @State private var transactions: [UITransaction] = []
     @State private var isLoading = true
-    
+    @State private var showingReclaimAlert = false
+    @State private var transactionToReclaim: UITransaction?
+    @State private var reclaimError: String?
+    @State private var showingErrorAlert = false
+    @State private var selectedTransaction: UITransaction?
+
     var body: some View {
         NavigationView {
             List {
@@ -25,7 +30,21 @@ struct ActivityView: View {
                     .padding()
                 } else {
                     ForEach(transactions, id: \.id) { transaction in
-                        TransactionRowView(transaction: transaction)
+                        Button {
+                            selectedTransaction = transaction
+                        } label: {
+                            TransactionRowView(transaction: transaction)
+                        }
+                        .buttonStyle(.plain)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            if transaction.type == .sent && transaction.status == .pending {
+                                Button("Reclaim") {
+                                    transactionToReclaim = transaction
+                                    showingReclaimAlert = true
+                                }
+                                .tint(.orange)
+                            }
+                        }
                     }
                 }
             }
@@ -33,23 +52,88 @@ struct ActivityView: View {
             .refreshable {
                 await loadData()
             }
+            .alert("Reclaim Transaction?", isPresented: $showingReclaimAlert) {
+                Button("Cancel", role: .cancel) {
+                    transactionToReclaim = nil
+                }
+                Button("Reclaim") {
+                    Task { await performReclaim() }
+                }
+            } message: {
+                Text("This will return the funds to your wallet. Only do this if the recipient has not claimed the payment.")
+            }
+            .alert("Reclaim Failed", isPresented: $showingErrorAlert) {
+                Button("OK", role: .cancel) {
+                    reclaimError = nil
+                }
+            } message: {
+                Text(reclaimError ?? "These funds may have already been claimed by the recipient.")
+            }
+            .adaptiveSheet(item: $selectedTransaction) { transaction in
+                TransactionDetailView(
+                    transaction: transaction,
+                    onReclaim: transaction.type == .sent && transaction.status == .pending
+                        ? { await performReclaimFromDetail(transaction) }
+                        : nil
+                )
+                .environmentObject(walletManager)
+            }
         }
         .task {
             await loadData()
         }
     }
-    
+
     private func loadData() async {
         await MainActor.run {
             isLoading = true
         }
-        
+
         let loadedTransactions = await walletManager.listTransactions()
         walletManager.refreshBalance()
-        
+
         await MainActor.run {
             self.transactions = loadedTransactions
             self.isLoading = false
+        }
+    }
+
+    private func performReclaim() async {
+        guard let transaction = transactionToReclaim else { return }
+
+        do {
+            try await walletManager.reclaimTransaction(
+                transactionId: transaction.id,
+                mintUrl: transaction.mintUrl
+            )
+            await loadData()  // Refresh the list
+        } catch {
+            await MainActor.run {
+                reclaimError = error.localizedDescription
+                showingErrorAlert = true
+            }
+        }
+
+        await MainActor.run {
+            transactionToReclaim = nil
+        }
+    }
+
+    private func performReclaimFromDetail(_ transaction: UITransaction) async {
+        do {
+            try await walletManager.reclaimTransaction(
+                transactionId: transaction.id,
+                mintUrl: transaction.mintUrl
+            )
+            await MainActor.run {
+                selectedTransaction = nil  // Dismiss sheet
+            }
+            await loadData()
+        } catch {
+            await MainActor.run {
+                reclaimError = error.localizedDescription
+                showingErrorAlert = true
+            }
         }
     }
 }
@@ -143,8 +227,12 @@ struct TransactionRowView: View {
     }
     
     private var amountText: String {
+        // For sent transactions, show total including fee
+        let displayAmount = transaction.type == .sent
+            ? transaction.amount + transaction.fee
+            : transaction.amount
         let prefix = transaction.type == .received ? "+" : "-"
-        return "\(prefix)₿\(formatAmount(transaction.amount))"
+        return "\(prefix)₿\(formatAmount(displayAmount))"
     }
     
     private var amountColor: Color {

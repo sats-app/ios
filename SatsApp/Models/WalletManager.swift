@@ -147,16 +147,23 @@ class WalletManager: ObservableObject {
             var transactions: [UITransaction] = []
 
             for cdkTransaction in cdkTransactions {
-                let timestamp = cdkTransaction.timestamp
-                let transactionDate = Date(timeIntervalSince1970: TimeInterval(timestamp))
+                let transactionDate = Date(timeIntervalSince1970: TimeInterval(cdkTransaction.timestamp))
+
+                // Check pending status for outgoing transactions
+                let isPending = cdkTransaction.direction == .outgoing
+                    ? await checkTransactionPending(cdkTransaction)
+                    : false
 
                 let transaction = UITransaction(
+                    id: cdkTransaction.id.hex,
                     type: cdkTransaction.direction == .incoming ? .received : .sent,
                     amount: Int(cdkTransaction.amount.value),
+                    fee: Int(cdkTransaction.fee.value),
                     description: cdkTransaction.direction == .incoming ? "Received" : "Sent",
                     memo: cdkTransaction.memo,
                     date: transactionDate,
-                    status: .completed
+                    status: isPending ? .pending : .completed,
+                    mintUrl: cdkTransaction.mintUrl.url
                 )
                 transactions.append(transaction)
             }
@@ -568,23 +575,122 @@ class WalletManager: ObservableObject {
         }
     }
 
-    // MARK: - Proof State Checking
+    // MARK: - Proof State Checking (NUT-07)
 
-    /// Checks if the proofs in a token have been spent (claimed by recipient)
-    /// Note: Currently not implemented - requires CDK API for proof Y value extraction
-    /// The UI will still function but won't auto-detect when tokens are claimed
+    /// Response from mint's /v1/checkstate endpoint
+    private struct CheckStateResponse: Codable {
+        let states: [ProofStateInfo]
+    }
+
+    /// Individual proof state from mint response
+    private struct ProofStateInfo: Codable {
+        let Y: String
+        let state: String  // "UNSPENT", "PENDING", "SPENT"
+    }
+
+    /// Check if a token's proofs have been spent (claimed by recipient)
+    /// Returns true if all proofs are spent, false otherwise
     func checkTokenSpent(tokenString: String) async throws -> Bool {
-        // TODO: Implement NUT-07 proof state checking when CDK API is available
-        // This requires:
-        // 1. Decoding the token to get proofs
-        // 2. Extracting Y values (hash_to_curve(secret)) from each proof
-        // 3. Calling mint's /v1/checkstate endpoint
-        // 4. Checking if all proofs are SPENT
+        guard let multiMintWallet = self.wallet else {
+            return false
+        }
 
-        // For now, return false to keep the QR code visible
-        // User can manually dismiss or share the token
-        AppLogger.network.debug("Proof state check not implemented - returning false")
-        return false
+        // Decode the token
+        let token = try Token.decode(encodedToken: tokenString)
+
+        // Get token data (mint URL and proofs) using wallet method
+        let tokenData = try await multiMintWallet.getTokenData(token: token)
+        let proofs = tokenData.proofs
+
+        // Check proof states at the mint
+        let states = try await multiMintWallet.checkProofsState(
+            mintUrl: tokenData.mintUrl,
+            proofs: proofs
+        )
+
+        // Token is spent if all proofs are spent
+        let allSpent = states.allSatisfy { $0 == ProofState.spent }
+        AppLogger.network.debug("Token spent check: \(allSpent) for \(proofs.count) proofs")
+        return allSpent
+    }
+
+    /// Check if a sent transaction's proofs are still unspent at the mint
+    /// Returns true if transaction is pending (all proofs unspent), false if completed
+    func checkTransactionPending(_ cdkTransaction: Transaction) async -> Bool {
+        guard cdkTransaction.direction == .outgoing else { return false }
+        guard !cdkTransaction.ys.isEmpty else { return false }
+
+        do {
+            // Build the Y values array for the request
+            let ys = cdkTransaction.ys.map { $0.hex }
+            let payload: [String: Any] = ["Ys": ys]
+
+            // Construct the checkstate URL
+            guard var urlComponents = URLComponents(string: cdkTransaction.mintUrl.url) else {
+                AppLogger.network.debug("Invalid mint URL for state check")
+                return false
+            }
+            urlComponents.path = "/v1/checkstate"
+
+            guard let url = urlComponents.url else {
+                AppLogger.network.debug("Failed to construct checkstate URL")
+                return false
+            }
+
+            // Build the request
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try JSONSerialization.data(withJSONObject: payload)
+            request.timeoutInterval = 10  // Shorter timeout for state checks
+
+            // Make the request
+            let (data, response) = try await URLSession.shared.data(for: request)
+
+            // Check HTTP status
+            guard let httpResponse = response as? HTTPURLResponse,
+                  (200...299).contains(httpResponse.statusCode) else {
+                AppLogger.network.debug("Checkstate returned non-success status")
+                return false
+            }
+
+            // Parse response
+            let checkResponse = try JSONDecoder().decode(CheckStateResponse.self, from: data)
+
+            // Transaction is pending if ALL proofs are unspent
+            let isPending = checkResponse.states.allSatisfy { $0.state == "UNSPENT" }
+            AppLogger.network.debug("Transaction pending check: \(isPending) for \(ys.count) proofs")
+            return isPending
+
+        } catch {
+            AppLogger.network.debug("Failed to check proof state: \(error.localizedDescription)")
+            return false  // Assume completed on error (safe default)
+        }
+    }
+
+    // MARK: - Transaction Reclaim
+
+    /// Reclaim a pending transaction by reverting it
+    /// This returns the proofs to the wallet if they haven't been claimed
+    func reclaimTransaction(transactionId: String, mintUrl: String) async throws {
+        guard let multiMintWallet = self.wallet else {
+            AppLogger.wallet.error("Wallet not available for reclaim")
+            throw WalletError.walletNotInitialized
+        }
+
+        // Get the single-mint wallet for this transaction's mint
+        let mint = MintUrl(url: mintUrl)
+        guard let singleWallet = await multiMintWallet.getWallet(mintUrl: mint) else {
+            AppLogger.wallet.error("Wallet not found for mint: \(mintUrl)")
+            throw WalletError.walletNotInitialized
+        }
+
+        let id = TransactionId(hex: transactionId)
+        try await singleWallet.revertTransaction(id: id)
+        AppLogger.network.info("Successfully reclaimed transaction: \(transactionId)")
+
+        // Refresh balance after reclaim
+        refreshBalance()
     }
 }
 
