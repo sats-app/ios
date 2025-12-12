@@ -14,5 +14,9 @@
     <array>
         <string>iCloud.app.paywithsats</string>
     </array>
+    <key>com.apple.security.application-groups</key>
+    <array>
+        <string>group.app.paywithsats</string>
+    </array>
 </dict>
 </plist>

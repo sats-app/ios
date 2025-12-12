@@ -2,11 +2,16 @@ import SwiftUI
 
 struct AnimatedBalanceText: View {
     let balance: String
+    @StateObject private var settings = SettingsManager.shared
     @State private var animateBalance = false
     @State private var previousBalance = ""
 
+    private var displayBalance: String {
+        settings.hideBalance ? "***" : balance
+    }
+
     var body: some View {
-        Text(balance)
+        Text(displayBalance)
             .font(.title3)
             .fontWeight(.semibold)
             .foregroundColor(Color.orange)
@@ -32,7 +37,8 @@ struct BalanceToolbarModifier: ViewModifier {
     @EnvironmentObject var walletManager: WalletManager
     @State private var showingMintsDrawer = false
     @State private var showingDepositSheet = false
-    
+    @State private var showingSettings = false
+
     func body(content: Content) -> some View {
         content
             .navigationTitle("")
@@ -63,7 +69,7 @@ struct BalanceToolbarModifier: ViewModifier {
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
-                        // Settings action
+                        showingSettings = true
                     }) {
                         Image(systemName: "gearshape")
                             .foregroundColor(.orange)
@@ -75,6 +81,9 @@ struct BalanceToolbarModifier: ViewModifier {
             }
             .adaptiveSheet(isPresent: $showingDepositSheet) {
                 DepositSheetView()
+            }
+            .sheet(isPresented: $showingSettings) {
+                SettingsView()
             }
     }
 }

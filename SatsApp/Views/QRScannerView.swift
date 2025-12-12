@@ -844,15 +844,3 @@ struct SuccessView: View {
         }
     }
 }
-
-// MARK: - WalletManager Extension
-
-extension WalletManager {
-    static func formatAmount(_ sats: UInt64) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        formatter.groupingSeparator = ","
-        formatter.usesGroupingSeparator = true
-        return "\u{20BF}" + (formatter.string(from: NSNumber(value: sats)) ?? "0")
-    }
-}

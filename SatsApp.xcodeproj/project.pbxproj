@@ -7,10 +7,23 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		07297690D658DC525713C4E9 /* MintInfoService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D12345678901ABCF /* MintInfoService.swift */; };
 		074A67120E2071879303ACA8 /* TransactionDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C2A3887288A3E4E9904F5C4 /* TransactionDetailView.swift */; };
+		175C51A50230943A38FBF2F2 /* QRCodeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6616A52E16868EB7A0E55094 /* QRCodeView.swift */; };
+		378926B935B0379F9BE25A19 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 395BB479FF33107330EC606A /* Foundation.framework */; };
 		47F4DEDFF443F4806F209AA0 /* AppLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3729603695357C070353FFFC /* AppLogger.swift */; };
+		55B8BCCE248261BE86026F0A /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABE6 /* Theme.swift */; };
 		57FEE5D29930D25747C39372 /* MintDirectory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A4297BFD328F570E47F89FD /* MintDirectory.swift */; };
+		61D7378CAC85F4A90F004B35 /* MessageRequestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 858534BB08C38875ABE74E57 /* MessageRequestView.swift */; };
 		6339661E2E859DF1001FC57B /* CashuDevKit in Frameworks */ = {isa = PBXBuildFile; productRef = 6339661D2E859DF1001FC57B /* CashuDevKit */; };
+		6339661F2E859DF1001FC57C /* CashuDevKit in Frameworks */ = {isa = PBXBuildFile; productRef = 6339661D2E859DF1001FC57D /* CashuDevKit */; };
+		634FF9E2D6BF11A019D0BC69 /* MessageSendView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBFE08D81F27E72499AA55D5 /* MessageSendView.swift */; };
+		7C93487796ED04F1364ABDFA /* MessageMintSelector.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDA4F0556167A2DA2AE0BCB6 /* MessageMintSelector.swift */; };
+		7DFFB275765373671D37D595 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A78F9B651765DD52AD3AE6E4 /* SettingsView.swift */; };
+		848BEC2D1271EBC5E1DF65B5 /* MessagesViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0AE7494FC6812421ED1FDCC /* MessagesViewController.swift */; };
+		870D99977D223D8BE4E6B9B1 /* AppLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3729603695357C070353FFFC /* AppLogger.swift */; };
+		938AD4AAD378EFEB5A58FEEE /* SettingsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 080602E3930B4CE17A498F70 /* SettingsManager.swift */; };
+		9A063DB8E6EAFF2F298F57D4 /* WalletManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABE2 /* WalletManager.swift */; };
 		B12345678901ABCD /* SatsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABCC /* SatsApp.swift */; };
 		B12345678901ABCF /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABCE /* ContentView.swift */; };
 		B12345678901ABD1 /* TransactView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABD0 /* TransactView.swift */; };
@@ -26,19 +39,62 @@
 		BF401BB572094DBCF82E13F3 /* QRCodeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6616A52E16868EB7A0E55094 /* QRCodeView.swift */; };
 		C12345678901ABC6 /* StorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C12345678901ABC7 /* StorageManager.swift */; };
 		C12345678901ABC8 /* MintSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C12345678901ABC9 /* MintSelectionView.swift */; };
+		C32D68229DFB1877CA62A881 /* StorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C12345678901ABC7 /* StorageManager.swift */; };
 		CBECD537C820DD3993B261BA /* AnimatedQRCodeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B14188E42FA49335CD5BB6B3 /* AnimatedQRCodeView.swift */; };
 		D12345678901ABCE /* MintInfoService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D12345678901ABCF /* MintInfoService.swift */; };
 		D12345678901ABD1 /* MintDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D12345678901ABD0 /* MintDetailView.swift */; };
+		D9208FBA7AD7C17B79D993F0 /* MessageAppView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F89FD332FE27EA1BFA3013D /* MessageAppView.swift */; };
+		DF849234920C2B4A2B8009D6 /* SettingsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 080602E3930B4CE17A498F70 /* SettingsManager.swift */; };
 		E12345678901ABD2 /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E12345678901ABD3 /* QRScannerView.swift */; };
 		F013C5A2C3C48667F3FBE5BB /* URUI in Frameworks */ = {isa = PBXBuildFile; productRef = 70FE868618882C027F706631 /* URUI */; };
 		F12345678901ABCE /* AnimatedDigitsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F12345678901ABCD /* AnimatedDigitsView.swift */; };
+		F81F0CA11EA04FF678ACC426 /* SeedPhraseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25F459B5E21E582BA2B68D3A /* SeedPhraseView.swift */; };
+		FBB55E3B6355753B44F3DF11 /* UITransaction.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901ABF9 /* UITransaction.swift */; };
+		FDEB7848BFCFF578A13E2947 /* MessageNumberPad.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74F99DEA4D1978D2EF884135 /* MessageNumberPad.swift */; };
+		FEAB12CD34EF56789012ABCD /* MessageBubbleImageGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD12345678EF90ABCD1234 /* MessageBubbleImageGenerator.swift */; };
+		FE65AD509667186DE58BB699 /* SatsAppMessages.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = D7EBB71926DF4DF147401188 /* SatsAppMessages.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		M1N2O3P4Q5R6S7T8U9V0W1X2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6G7H8I9J0K1L2 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		650FEE891C7573FC68BF20B6 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B12345678901ABC1 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A2AF9105CF1D4FD5F802EBA6;
+			remoteInfo = SatsAppMessages;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		541190EAD98A78871EBFD1D6 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				FE65AD509667186DE58BB699 /* SatsAppMessages.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		080602E3930B4CE17A498F70 /* SettingsManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SettingsManager.swift; sourceTree = "<group>"; };
+		1E27FA9C22DE8468D0C16D29 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		25F459B5E21E582BA2B68D3A /* SeedPhraseView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SeedPhraseView.swift; sourceTree = "<group>"; };
+		32141A3BAB0977F5A743123D /* SatsAppMessages.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = SatsAppMessages.entitlements; sourceTree = "<group>"; };
 		3729603695357C070353FFFC /* AppLogger.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppLogger.swift; sourceTree = "<group>"; };
+		395BB479FF33107330EC606A /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		4A4297BFD328F570E47F89FD /* MintDirectory.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MintDirectory.swift; sourceTree = "<group>"; };
 		6616A52E16868EB7A0E55094 /* QRCodeView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = QRCodeView.swift; sourceTree = "<group>"; };
+		74F99DEA4D1978D2EF884135 /* MessageNumberPad.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MessageNumberPad.swift; sourceTree = "<group>"; };
+		858534BB08C38875ABE74E57 /* MessageRequestView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MessageRequestView.swift; sourceTree = "<group>"; };
+		8F89FD332FE27EA1BFA3013D /* MessageAppView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MessageAppView.swift; sourceTree = "<group>"; };
 		9C2A3887288A3E4E9904F5C4 /* TransactionDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TransactionDetailView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F6G7H8I9J0K1L2 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A78F9B651765DD52AD3AE6E4 /* SettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		B12345678901ABC9 /* SatsApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SatsApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B12345678901ABCC /* SatsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SatsApp.swift; sourceTree = "<group>"; };
 		B12345678901ABCE /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -53,16 +109,30 @@
 		B12345678901ABE8 /* WalletLoadingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalletLoadingView.swift; sourceTree = "<group>"; };
 		B12345678901ABF9 /* UITransaction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UITransaction.swift; sourceTree = "<group>"; };
 		B14188E42FA49335CD5BB6B3 /* AnimatedQRCodeView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AnimatedQRCodeView.swift; sourceTree = "<group>"; };
+		BDA4F0556167A2DA2AE0BCB6 /* MessageMintSelector.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MessageMintSelector.swift; sourceTree = "<group>"; };
+		ABCD12345678EF90ABCD1234 /* MessageBubbleImageGenerator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MessageBubbleImageGenerator.swift; sourceTree = "<group>"; };
 		C12345678901ABC7 /* StorageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageManager.swift; sourceTree = "<group>"; };
 		C12345678901ABC9 /* MintSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MintSelectionView.swift; sourceTree = "<group>"; };
 		C12345678901ABCA /* SatsApp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SatsApp.entitlements; sourceTree = "<group>"; };
 		D12345678901ABCF /* MintInfoService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MintInfoService.swift; sourceTree = "<group>"; };
 		D12345678901ABD0 /* MintDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MintDetailView.swift; sourceTree = "<group>"; };
+		D7EBB71926DF4DF147401188 /* SatsAppMessages.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SatsAppMessages.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		DBFE08D81F27E72499AA55D5 /* MessageSendView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MessageSendView.swift; sourceTree = "<group>"; };
 		E12345678901ABD3 /* QRScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRScannerView.swift; sourceTree = "<group>"; };
+		F0AE7494FC6812421ED1FDCC /* MessagesViewController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MessagesViewController.swift; sourceTree = "<group>"; };
 		F12345678901ABCD /* AnimatedDigitsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnimatedDigitsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		A726D699D2637D9D7A019DD9 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				378926B935B0379F9BE25A19 /* Foundation.framework in Frameworks */,
+				6339661F2E859DF1001FC57C /* CashuDevKit in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		B12345678901ABC6 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -75,11 +145,54 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		4EB16CC23C8B29F44C82DC79 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				711DDD58CA6FAF69EF69A17C /* Components */,
+				8F89FD332FE27EA1BFA3013D /* MessageAppView.swift */,
+				DBFE08D81F27E72499AA55D5 /* MessageSendView.swift */,
+				858534BB08C38875ABE74E57 /* MessageRequestView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		711DDD58CA6FAF69EF69A17C /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				74F99DEA4D1978D2EF884135 /* MessageNumberPad.swift */,
+				BDA4F0556167A2DA2AE0BCB6 /* MessageMintSelector.swift */,
+				ABCD12345678EF90ABCD1234 /* MessageBubbleImageGenerator.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		87FB665D0E58BD1147AFC81C /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				DB62DA1681F35DB991209BD6 /* iOS */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		9A0C5A2531059F92EF6B099E /* SatsAppMessages */ = {
+			isa = PBXGroup;
+			children = (
+				4EB16CC23C8B29F44C82DC79 /* Views */,
+				BEE6DA3CEBB113375D0CFE83 /* Resources */,
+				1E27FA9C22DE8468D0C16D29 /* Info.plist */,
+				32141A3BAB0977F5A743123D /* SatsAppMessages.entitlements */,
+				F0AE7494FC6812421ED1FDCC /* MessagesViewController.swift */,
+			);
+			path = SatsAppMessages;
+			sourceTree = "<group>";
+		};
 		B12345678901ABC0 = {
 			isa = PBXGroup;
 			children = (
 				B12345678901ABCB /* SatsApp */,
 				B12345678901ABCA /* Products */,
+				87FB665D0E58BD1147AFC81C /* Frameworks */,
+				9A0C5A2531059F92EF6B099E /* SatsAppMessages */,
 			);
 			sourceTree = "<group>";
 		};
@@ -87,6 +200,7 @@
 			isa = PBXGroup;
 			children = (
 				B12345678901ABC9 /* SatsApp.app */,
+				D7EBB71926DF4DF147401188 /* SatsAppMessages.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -113,6 +227,14 @@
 			path = "Preview Content";
 			sourceTree = "<group>";
 		};
+		BEE6DA3CEBB113375D0CFE83 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				A1B2C3D4E5F6G7H8I9J0K1L2 /* Assets.xcassets */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
 		C12345678901ABC1 /* App */ = {
 			isa = PBXGroup;
 			children = (
@@ -130,6 +252,7 @@
 				C12345678901ABC7 /* StorageManager.swift */,
 				4A4297BFD328F570E47F89FD /* MintDirectory.swift */,
 				D12345678901ABCF /* MintInfoService.swift */,
+				080602E3930B4CE17A498F70 /* SettingsManager.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -147,6 +270,8 @@
 				D12345678901ABD0 /* MintDetailView.swift */,
 				E12345678901ABD3 /* QRScannerView.swift */,
 				9C2A3887288A3E4E9904F5C4 /* TransactionDetailView.swift */,
+				A78F9B651765DD52AD3AE6E4 /* SettingsView.swift */,
+				25F459B5E21E582BA2B68D3A /* SeedPhraseView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -170,9 +295,37 @@
 			path = Resources;
 			sourceTree = "<group>";
 		};
+		DB62DA1681F35DB991209BD6 /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				395BB479FF33107330EC606A /* Foundation.framework */,
+			);
+			name = iOS;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		A2AF9105CF1D4FD5F802EBA6 /* SatsAppMessages */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1141576073124E08985B27C8 /* Build configuration list for PBXNativeTarget "SatsAppMessages" */;
+			buildPhases = (
+				4E5350A9A8803C4FFB567686 /* Sources */,
+				A726D699D2637D9D7A019DD9 /* Frameworks */,
+				81A979A1D5E09E7E5CE9F1B9 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = SatsAppMessages;
+			packageProductDependencies = (
+				6339661D2E859DF1001FC57D /* CashuDevKit */,
+			);
+			productName = SatsAppMessages;
+			productReference = D7EBB71926DF4DF147401188 /* SatsAppMessages.appex */;
+			productType = "com.apple.product-type.app-extension.messages";
+		};
 		B12345678901ABC8 /* SatsApp */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = B12345678901ABDA /* Build configuration list for PBXNativeTarget "SatsApp" */;
@@ -180,10 +333,12 @@
 				B12345678901ABC5 /* Sources */,
 				B12345678901ABC6 /* Frameworks */,
 				B12345678901ABC7 /* Resources */,
+				541190EAD98A78871EBFD1D6 /* Embed App Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				99234E5A2092C905D60FD20D /* PBXTargetDependency */,
 			);
 			name = SatsApp;
 			packageProductDependencies = (
@@ -226,11 +381,20 @@
 			projectRoot = "";
 			targets = (
 				B12345678901ABC8 /* SatsApp */,
+				A2AF9105CF1D4FD5F802EBA6 /* SatsAppMessages */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		81A979A1D5E09E7E5CE9F1B9 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				M1N2O3P4Q5R6S7T8U9V0W1X2 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		B12345678901ABC7 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -243,6 +407,28 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		4E5350A9A8803C4FFB567686 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				848BEC2D1271EBC5E1DF65B5 /* MessagesViewController.swift in Sources */,
+				D9208FBA7AD7C17B79D993F0 /* MessageAppView.swift in Sources */,
+				634FF9E2D6BF11A019D0BC69 /* MessageSendView.swift in Sources */,
+				61D7378CAC85F4A90F004B35 /* MessageRequestView.swift in Sources */,
+				FDEB7848BFCFF578A13E2947 /* MessageNumberPad.swift in Sources */,
+				7C93487796ED04F1364ABDFA /* MessageMintSelector.swift in Sources */,
+				FEAB12CD34EF56789012ABCD /* MessageBubbleImageGenerator.swift in Sources */,
+				9A063DB8E6EAFF2F298F57D4 /* WalletManager.swift in Sources */,
+				C32D68229DFB1877CA62A881 /* StorageManager.swift in Sources */,
+				870D99977D223D8BE4E6B9B1 /* AppLogger.swift in Sources */,
+				FBB55E3B6355753B44F3DF11 /* UITransaction.swift in Sources */,
+				07297690D658DC525713C4E9 /* MintInfoService.swift in Sources */,
+				55B8BCCE248261BE86026F0A /* Theme.swift in Sources */,
+				175C51A50230943A38FBF2F2 /* QRCodeView.swift in Sources */,
+				DF849234920C2B4A2B8009D6 /* SettingsManager.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		B12345678901ABC5 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -268,12 +454,54 @@
 				E12345678901ABD2 /* QRScannerView.swift in Sources */,
 				F12345678901ABCE /* AnimatedDigitsView.swift in Sources */,
 				074A67120E2071879303ACA8 /* TransactionDetailView.swift in Sources */,
+				938AD4AAD378EFEB5A58FEEE /* SettingsManager.swift in Sources */,
+				7DFFB275765373671D37D595 /* SettingsView.swift in Sources */,
+				F81F0CA11EA04FF678ACC426 /* SeedPhraseView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		99234E5A2092C905D60FD20D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = SatsAppMessages;
+			target = A2AF9105CF1D4FD5F802EBA6 /* SatsAppMessages */;
+			targetProxy = 650FEE891C7573FC68BF20B6 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		09149AF242DC8BE8B71B8E70 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = SatsAppMessages/SatsAppMessages.entitlements;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = YF7HP5P49C;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SatsAppMessages/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = SatsApp;
+				INFOPLIST_KEY_NSExtension_NSExtensionPointIdentifier = "com.apple.message-payload-provider";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.paywithsats.Messages;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 		B12345678901ABD9 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -402,7 +630,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"SatsApp/Preview Content\"";
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = YF7HP5P49C;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = SatsApp/Resources/Info.plist;
@@ -433,7 +661,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"SatsApp/Preview Content\"";
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = YF7HP5P49C;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = SatsApp/Resources/Info.plist;
@@ -455,9 +683,47 @@
 			};
 			name = Release;
 		};
+		BD9D4681EE7984D5BE1F97EC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = SatsAppMessages/SatsAppMessages.entitlements;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = YF7HP5P49C;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SatsAppMessages/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = SatsApp;
+				INFOPLIST_KEY_NSExtension_NSExtensionPointIdentifier = "com.apple.message-payload-provider";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.paywithsats.Messages;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		1141576073124E08985B27C8 /* Build configuration list for PBXNativeTarget "SatsAppMessages" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				09149AF242DC8BE8B71B8E70 /* Release */,
+				BD9D4681EE7984D5BE1F97EC /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		B12345678901ABC4 /* Build configuration list for PBXProject "SatsApp" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -499,6 +765,11 @@
 
 /* Begin XCSwiftPackageProductDependency section */
 		6339661D2E859DF1001FC57B /* CashuDevKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6339661C2E859DF1001FC57B /* XCRemoteSwiftPackageReference "cdk-swift" */;
+			productName = CashuDevKit;
+		};
+		6339661D2E859DF1001FC57D /* CashuDevKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 6339661C2E859DF1001FC57B /* XCRemoteSwiftPackageReference "cdk-swift" */;
 			productName = CashuDevKit;

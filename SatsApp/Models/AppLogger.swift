@@ -21,4 +21,7 @@ struct AppLogger {
 
     /// Logger for storage operations (iCloud, file system, seed management)
     static let storage = Logger(subsystem: subsystem, category: "storage")
+
+    /// Logger for settings and user preferences
+    static let settings = Logger(subsystem: subsystem, category: "settings")
 }

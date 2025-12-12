@@ -19,6 +19,15 @@ class WalletManager: ObservableObject {
         return "₿" + (formatter.string(from: NSNumber(value: balance)) ?? "0")
     }
 
+    /// Format a sats amount with Bitcoin symbol and grouping
+    static func formatAmount(_ sats: UInt64) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.groupingSeparator = ","
+        formatter.usesGroupingSeparator = true
+        return "\u{20BF}" + (formatter.string(from: NSNumber(value: sats)) ?? "0")
+    }
+
     private var database: WalletSqliteDatabase?
 
     init() {
@@ -226,6 +235,16 @@ class WalletManager: ObservableObject {
             return name
         }
         return URL(string: url)?.host ?? url
+    }
+
+    /// Returns the preferred mint from available mints
+    /// Uses default mint if set and still configured, otherwise returns first available
+    func getPreferredMint(from mints: [String]) -> String? {
+        if let defaultMint = SettingsManager.shared.defaultMintUrl,
+           mints.contains(defaultMint) {
+            return defaultMint
+        }
+        return mints.first
     }
 
     /// Fetches and caches mint names for all configured mints
