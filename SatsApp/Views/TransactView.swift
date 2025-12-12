@@ -96,6 +96,8 @@ struct TransactView: View {
                     .foregroundColor(.white)
                     .cornerRadius(12)
                     .font(.headline)
+                    .disabled(amount == "0")
+                    .opacity(amount == "0" ? 0.5 : 1.0)
 
                     Button(action: {
                         showingScanner = true
@@ -117,6 +119,8 @@ struct TransactView: View {
                     .foregroundColor(.white)
                     .cornerRadius(12)
                     .font(.headline)
+                    .disabled(amount == "0")
+                    .opacity(amount == "0" ? 0.5 : 1.0)
                 }
                 .padding(.horizontal)
                 .padding(.bottom, 20)

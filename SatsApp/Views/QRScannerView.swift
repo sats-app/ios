@@ -78,6 +78,8 @@ struct ScannedPaymentRequestData {
 class CameraScannerController: NSObject, ObservableObject {
     @Published var isRunning = false
     @Published var isSupported = true
+    @Published var isReady = false
+    @Published var permissionStatus: AVAuthorizationStatus = .notDetermined
 
     let codesPublisher = URCodesPublisher()
     @MainActor lazy var scanState = URScanState(codesPublisher: codesPublisher)
@@ -90,7 +92,37 @@ class CameraScannerController: NSObject, ObservableObject {
 
     override init() {
         super.init()
-        setupCaptureSession()
+        // Don't setup capture session here - wait for permission check
+    }
+
+    func checkAndRequestPermission() async {
+        let status = AVCaptureDevice.authorizationStatus(for: .video)
+        await MainActor.run {
+            self.permissionStatus = status
+        }
+
+        switch status {
+        case .notDetermined:
+            let granted = await AVCaptureDevice.requestAccess(for: .video)
+            await MainActor.run {
+                self.permissionStatus = granted ? .authorized : .denied
+                if granted {
+                    self.setupCaptureSession()
+                } else {
+                    self.isSupported = false
+                }
+            }
+        case .authorized:
+            await MainActor.run {
+                self.setupCaptureSession()
+            }
+        case .denied, .restricted:
+            await MainActor.run {
+                self.isSupported = false
+            }
+        @unknown default:
+            break
+        }
     }
 
     private func setupCaptureSession() {
@@ -138,6 +170,10 @@ class CameraScannerController: NSObject, ObservableObject {
             captureSession = session
             previewLayer = AVCaptureVideoPreviewLayer(session: session)
             previewLayer?.videoGravity = .resizeAspectFill
+
+            DispatchQueue.main.async {
+                self.isReady = true
+            }
 
         } catch {
             DispatchQueue.main.async {
@@ -201,25 +237,32 @@ class CameraScannerController: NSObject, ObservableObject {
 
 // MARK: - Camera Preview UIViewRepresentable
 
+class CameraPreviewUIView: UIView {
+    var previewLayer: AVCaptureVideoPreviewLayer?
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        previewLayer?.frame = bounds
+    }
+}
+
 struct CameraPreviewView: UIViewRepresentable {
     let controller: CameraScannerController
 
-    func makeUIView(context: Context) -> UIView {
-        let view = UIView(frame: .zero)
+    func makeUIView(context: Context) -> CameraPreviewUIView {
+        let view = CameraPreviewUIView()
         view.backgroundColor = .black
 
         if let previewLayer = controller.getPreviewLayer() {
-            previewLayer.frame = view.bounds
+            view.previewLayer = previewLayer
             view.layer.addSublayer(previewLayer)
         }
 
         return view
     }
 
-    func updateUIView(_ uiView: UIView, context: Context) {
-        if let previewLayer = controller.getPreviewLayer() {
-            previewLayer.frame = uiView.bounds
-        }
+    func updateUIView(_ uiView: CameraPreviewUIView, context: Context) {
+        // Preview layer frame is updated in layoutSubviews
     }
 }
 
@@ -245,6 +288,7 @@ struct QRScannerView: View {
     @State private var showingResultSheet = false
     @State private var showingTrustAlert = false
     @State private var tokenDetails: TokenDetails?
+    @State private var defaultMintName: String = ""
     @State private var cancellables = Set<AnyCancellable>()
 
     var body: some View {
@@ -277,7 +321,10 @@ struct QRScannerView: View {
         }
         .onAppear {
             setupScanResultHandler()
-            cameraController.startRunning()
+            Task {
+                await cameraController.checkAndRequestPermission()
+                cameraController.startRunning()
+            }
         }
         .onDisappear {
             cameraController.stopRunning()
@@ -299,11 +346,44 @@ struct QRScannerView: View {
 
     @ViewBuilder
     private var cameraPreview: some View {
-        if cameraController.isSupported {
+        if cameraController.isSupported && cameraController.isReady {
             CameraPreviewView(controller: cameraController)
                 .ignoresSafeArea()
+        } else if cameraController.permissionStatus == .denied || cameraController.permissionStatus == .restricted {
+            // Permission denied - show Settings button
+            Color.black
+                .ignoresSafeArea()
+                .overlay(
+                    VStack(spacing: 16) {
+                        Image(systemName: "camera.fill")
+                            .font(.system(size: 60))
+                            .foregroundColor(.gray)
+                        Text("Camera Access Required")
+                            .foregroundColor(.white)
+                            .font(.headline)
+                        Text("Please enable camera access in Settings to scan QR codes")
+                            .foregroundColor(.gray)
+                            .font(.subheadline)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 40)
+                        Button("Open Settings") {
+                            if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
+                                UIApplication.shared.open(settingsURL)
+                            }
+                        }
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 12)
+                        .background(Color.orange)
+                        .foregroundColor(.white)
+                        .cornerRadius(8)
+                        .padding(.top, 8)
+                        Text("Use paste button to test")
+                            .font(.caption)
+                            .foregroundColor(.gray.opacity(0.7))
+                    }
+                )
         } else {
-            // Simulator fallback
+            // Simulator fallback or permission not yet determined
             Color.black
                 .ignoresSafeArea()
                 .overlay(
@@ -423,9 +503,16 @@ struct QRScannerView: View {
         Button("Cancel", role: .cancel) {
             resetScanner()
         }
-        Button("Add Mint") {
+        Button("Trust Mint") {
             if let details = tokenDetails {
-                trustAndReceiveToken(details)
+                receiveWithTrust(details, trustMint: true)
+            }
+        }
+        if !defaultMintName.isEmpty {
+            Button("Transfer to \(defaultMintName)") {
+                if let details = tokenDetails {
+                    receiveWithTrust(details, trustMint: false)
+                }
             }
         }
     }
@@ -433,7 +520,9 @@ struct QRScannerView: View {
     @ViewBuilder
     private var trustAlertMessage: some View {
         if let details = tokenDetails {
-            Text("Adding \(URL(string: details.mintUrl)?.host ?? details.mintUrl) means trusting it to hold your funds. Only add mints you trust.")
+            let mintHost = URL(string: details.mintUrl)?.host ?? details.mintUrl
+            let amount = WalletManager.formatAmount(details.amount)
+            Text("This token (\(amount)) is from \(mintHost). Trust this mint to receive directly, or transfer to your default mint.")
         }
     }
 
@@ -558,75 +647,84 @@ struct QRScannerView: View {
     // MARK: - Cashu Token Processing
 
     private func processCashuToken(_ tokenString: String) {
+        let tokenPrefix = String(tokenString.prefix(20))
+        AppLogger.ui.info("Processing cashu token: \(tokenPrefix)...")
+
         state = .processingToken(tokenString)
         cameraController.stopRunning()
 
         Task {
             do {
-                // Try to receive with allowUntrusted: false
-                let amount = try await walletManager.receive(tokenString: tokenString)
+                // Step 1: Parse the token to get mint URL and amount
+                AppLogger.ui.debug("Step 1: Parsing token...")
+                let (mintUrl, amount) = try await walletManager.parseToken(tokenString: tokenString)
+                AppLogger.ui.debug("Token parsed: mint=\(mintUrl), amount=\(amount)")
 
-                await MainActor.run {
-                    walletManager.refreshBalance()
-                    // Call callback and dismiss - TransactView will show the success sheet
-                    onTokenReceived?(amount)
-                    dismiss()
-                }
-            } catch {
-                // Check if error is due to untrusted mint
-                let errorString = error.localizedDescription.lowercased()
-                if errorString.contains("untrusted") || errorString.contains("unknown mint") || errorString.contains("not in wallet") {
-                    // For untrusted mint, we show a simpler error since we can't easily extract mint info
-                    // User can add the mint manually in settings and try again
+                // Step 2: Check if the mint is already trusted
+                AppLogger.ui.debug("Step 2: Checking if mint is trusted...")
+                let isTrusted = await walletManager.isMintTrusted(mintUrl: mintUrl)
+                AppLogger.ui.info("Mint trust check: \(mintUrl) -> trusted=\(isTrusted)")
+
+                if isTrusted {
+                    // Mint is trusted, proceed with normal receive
+                    AppLogger.ui.debug("Step 3: Mint trusted, receiving directly...")
+                    let receivedAmount = try await walletManager.receive(tokenString: tokenString)
+                    AppLogger.ui.info("Token received successfully: \(receivedAmount) sats")
                     await MainActor.run {
-                        state = .error("Token from untrusted mint. Add the mint in settings first.")
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
-                            resetScanner()
-                        }
+                        walletManager.refreshBalance()
+                        onTokenReceived?(receivedAmount)
+                        dismiss()
                     }
                 } else {
+                    // Mint is not trusted, show trust alert
+                    AppLogger.ui.info("Mint not trusted, showing trust alert for: \(mintUrl)")
+                    let defaultMint = await walletManager.getDefaultMint()
+                    let mintName = defaultMint.map { walletManager.getMintDisplayName(for: $0) } ?? ""
+                    AppLogger.ui.debug("Default mint for transfer option: \(defaultMint ?? "none") (\(mintName))")
+
                     await MainActor.run {
-                        state = .error("Failed to receive: \(error.localizedDescription)")
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                            resetScanner()
-                        }
+                        tokenDetails = TokenDetails(tokenString: tokenString, mintUrl: mintUrl, amount: amount)
+                        defaultMintName = mintName
+                        state = .untrustedMint(TokenDetails(tokenString: tokenString, mintUrl: mintUrl, amount: amount))
+                        showingTrustAlert = true
+                    }
+                }
+            } catch {
+                AppLogger.ui.error("processCashuToken failed - Type: \(String(describing: type(of: error))), Description: \(error.localizedDescription), Details: \(String(describing: error))")
+                await MainActor.run {
+                    state = .error("Failed to process token: \(error.localizedDescription)")
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                        resetScanner()
                     }
                 }
             }
         }
     }
 
-    private func extractTokenInfo(_ tokenString: String) -> (mintUrl: String, amount: UInt64)? {
-        // Parse mint URL from cashu token format
-        // cashuA or cashuB tokens contain the mint URL in the encoded data
-        // For now, extract from error message or use a default approach
+    /// Handle the user's trust decision for an untrusted mint token
+    /// - Parameters:
+    ///   - details: The token details including token string, mint URL, and amount
+    ///   - trustMint: If true, trust the mint and receive directly. If false, transfer to default mint.
+    private func receiveWithTrust(_ details: TokenDetails, trustMint: Bool) {
+        AppLogger.ui.info("User trust decision: trustMint=\(trustMint) for mint=\(details.mintUrl)")
+        state = .processingToken(details.tokenString)
 
-        // Try to extract mint URL from the token string format
-        // Cashu tokens typically have the mint URL embedded
-        // Format: cashu[A|B]<base64 encoded data>
-
-        // Since the CDK Token API doesn't expose mint directly,
-        // we'll extract the mint URL from the error message when receive fails
-        // This function returns nil to trigger the simpler error flow
-        return nil
-    }
-
-    private func trustAndReceiveToken(_ details: TokenDetails) {
         Task {
             do {
-                // First add the mint
-                try await walletManager.addMint(mintUrl: details.mintUrl)
+                AppLogger.ui.debug("Calling walletManager.receiveToken(trustMint: \(trustMint))...")
+                let amount = try await walletManager.receiveToken(
+                    tokenString: details.tokenString,
+                    trustMint: trustMint
+                )
 
-                // Then receive with allowUntrusted: true (now the mint should be trusted)
-                let amount = try await walletManager.receive(tokenString: details.tokenString)
-
+                AppLogger.ui.info("receiveWithTrust completed successfully: \(amount) sats")
                 await MainActor.run {
                     walletManager.refreshBalance()
-                    // Call callback and dismiss - TransactView will show the success sheet
                     onTokenReceived?(amount)
                     dismiss()
                 }
             } catch {
+                AppLogger.ui.error("receiveWithTrust failed - Type: \(String(describing: type(of: error))), Description: \(error.localizedDescription), Details: \(String(describing: error))")
                 await MainActor.run {
                     state = .error("Failed to receive: \(error.localizedDescription)")
                     DispatchQueue.main.asyncAfter(deadline: .now() + 3) {

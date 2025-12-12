@@ -9,6 +9,11 @@ struct SatsApp: App {
     @State private var receiveError: String?
     @State private var isReceiving = false
 
+    // Trust alert state for untrusted mint tokens
+    @State private var showingTrustAlert = false
+    @State private var pendingTokenDetails: TokenDetails?
+    @State private var defaultMintName: String = ""
+
     var body: some Scene {
         WindowGroup {
             ContentView()
@@ -28,6 +33,29 @@ struct SatsApp: App {
                         isReceiving: isReceiving
                     )
                 }
+                .alert("Trust This Mint?", isPresented: $showingTrustAlert) {
+                    Button("Cancel", role: .cancel) {
+                        pendingTokenDetails = nil
+                    }
+                    Button("Trust Mint") {
+                        if let details = pendingTokenDetails {
+                            receiveWithTrust(details, trustMint: true)
+                        }
+                    }
+                    if !defaultMintName.isEmpty {
+                        Button("Transfer to \(defaultMintName)") {
+                            if let details = pendingTokenDetails {
+                                receiveWithTrust(details, trustMint: false)
+                            }
+                        }
+                    }
+                } message: {
+                    if let details = pendingTokenDetails {
+                        let mintHost = URL(string: details.mintUrl)?.host ?? details.mintUrl
+                        let amount = WalletManager.formatAmount(details.amount)
+                        Text("This token (\(amount)) is from \(mintHost). Trust this mint to receive directly, or transfer to your default mint.")
+                    }
+                }
         }
     }
 
@@ -46,13 +74,62 @@ struct SatsApp: App {
     }
 
     private func receiveToken(_ token: String) {
+        Task {
+            do {
+                // Parse the token to get mint URL and amount
+                let (mintUrl, amount) = try await walletManager.parseToken(tokenString: token)
+
+                // Check if the mint is already trusted
+                let isTrusted = await walletManager.isMintTrusted(mintUrl: mintUrl)
+
+                if isTrusted {
+                    // Mint is trusted, proceed with normal receive
+                    await MainActor.run {
+                        isReceiving = true
+                        receiveError = nil
+                        showReceiveSheet = true
+                    }
+
+                    let receivedAmount = try await walletManager.receive(tokenString: token)
+                    await MainActor.run {
+                        receiveAmount = receivedAmount
+                        isReceiving = false
+                        walletManager.refreshBalance()
+                    }
+                } else {
+                    // Mint is not trusted, show trust alert
+                    let defaultMint = await walletManager.getDefaultMint()
+                    let mintName = defaultMint.map { walletManager.getMintDisplayName(for: $0) } ?? ""
+
+                    await MainActor.run {
+                        pendingTokenDetails = TokenDetails(tokenString: token, mintUrl: mintUrl, amount: amount)
+                        defaultMintName = mintName
+                        showingTrustAlert = true
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    receiveError = error.localizedDescription
+                    isReceiving = false
+                    showReceiveSheet = true
+                }
+            }
+        }
+    }
+
+    private func receiveWithTrust(_ details: TokenDetails, trustMint: Bool) {
         isReceiving = true
         receiveError = nil
         showReceiveSheet = true
+        pendingToken = details.tokenString
+        pendingTokenDetails = nil
 
         Task {
             do {
-                let amount = try await walletManager.receive(tokenString: token)
+                let amount = try await walletManager.receiveToken(
+                    tokenString: details.tokenString,
+                    trustMint: trustMint
+                )
                 await MainActor.run {
                     receiveAmount = amount
                     isReceiving = false

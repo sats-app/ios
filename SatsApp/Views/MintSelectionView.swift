@@ -345,6 +345,11 @@ struct MintBrowserView: View {
         do {
             try await walletManager.addMint(mintUrl: url)
             await MainActor.run {
+                // Set as default mint if this is the first mint being added
+                if addedMints.isEmpty && existingMints.isEmpty {
+                    SettingsManager.shared.defaultMintUrl = url
+                    AppLogger.settings.info("Set default mint during onboarding: \(url)")
+                }
                 addedMints.insert(url)
                 isAddingMint = false
                 onMintAdded?(url)

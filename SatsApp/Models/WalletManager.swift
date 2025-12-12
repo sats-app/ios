@@ -247,6 +247,70 @@ class WalletManager: ObservableObject {
         return mints.first
     }
 
+    /// Returns the current default mint, validated against configured mints
+    /// Falls back to first available mint if default is not valid
+    func getDefaultMint() async -> String? {
+        let mints = await getMints()
+        if let defaultMint = SettingsManager.shared.defaultMintUrl,
+           mints.contains(defaultMint) {
+            return defaultMint
+        }
+        return mints.first
+    }
+
+    /// Check if a mint URL is already trusted (configured in wallet)
+    func isMintTrusted(mintUrl: String) async -> Bool {
+        AppLogger.wallet.debug("Checking if mint is trusted: \(mintUrl)")
+        let configuredMints = await getMints()
+        let isTrusted = configuredMints.contains(mintUrl)
+        AppLogger.wallet.debug("Mint trusted: \(isTrusted) (configured mints: \(configuredMints.count))")
+        return isTrusted
+    }
+
+    /// Parse a Cashu token to extract mint URL and amount
+    /// Uses direct Token methods to avoid requiring the mint to be pre-configured
+    func parseToken(tokenString: String) async throws -> (mintUrl: String, amount: UInt64) {
+        let tokenPrefix = String(tokenString.prefix(20))
+        AppLogger.wallet.debug("parseToken called with token: \(tokenPrefix)...")
+
+        // Step 1: Decode the token
+        AppLogger.wallet.debug("Decoding token with Token.decode()...")
+        let token: Token
+        do {
+            token = try Token.decode(encodedToken: tokenString)
+            AppLogger.wallet.debug("Token decoded successfully")
+        } catch {
+            AppLogger.wallet.error("Token.decode() failed - Type: \(String(describing: type(of: error))), Description: \(error.localizedDescription), Details: \(String(describing: error))")
+            throw error
+        }
+
+        // Step 2: Extract mint URL directly from token (no wallet/mint contact required)
+        AppLogger.wallet.debug("Extracting mint URL from token...")
+        let mintUrl: MintUrl
+        do {
+            mintUrl = try token.mintUrl()
+            AppLogger.wallet.debug("Mint URL extracted: \(mintUrl.url)")
+        } catch {
+            AppLogger.wallet.error("token.mintUrl() failed - Type: \(String(describing: type(of: error))), Description: \(error.localizedDescription), Details: \(String(describing: error))")
+            throw error
+        }
+
+        // Step 3: Get amount directly from token
+        AppLogger.wallet.debug("Extracting amount from token...")
+        let amount: UInt64
+        do {
+            let tokenAmount = try token.value()
+            amount = tokenAmount.value
+            AppLogger.wallet.debug("Amount extracted: \(amount)")
+        } catch {
+            AppLogger.wallet.error("token.value() failed - Type: \(String(describing: type(of: error))), Description: \(error.localizedDescription), Details: \(String(describing: error))")
+            throw error
+        }
+
+        AppLogger.wallet.info("Parsed token successfully: mint=\(mintUrl.url), amount=\(amount)")
+        return (mintUrl.url, amount)
+    }
+
     /// Fetches and caches mint names for all configured mints
     func refreshMintNames() {
         Task {
@@ -519,6 +583,72 @@ class WalletManager: ObservableObject {
             return receivedAmount.value
         } catch {
             AppLogger.network.error("Failed to receive token: \(error.localizedDescription)")
+            throw error
+        }
+    }
+
+    /// Receive a token with options for handling untrusted mints
+    /// - Parameters:
+    ///   - tokenString: The encoded Cashu token
+    ///   - trustMint: If true, allows receiving from untrusted mint. If false, transfers to default mint.
+    /// - Returns: The received amount in sats
+    func receiveToken(tokenString: String, trustMint: Bool) async throws -> UInt64 {
+        let tokenPrefix = String(tokenString.prefix(20))
+        AppLogger.wallet.info("receiveToken called: trustMint=\(trustMint), token=\(tokenPrefix)...")
+
+        guard let wallet = self.wallet else {
+            AppLogger.wallet.error("receiveToken failed: wallet not initialized")
+            throw WalletError.walletNotInitialized
+        }
+
+        // Step 1: Decode the token
+        AppLogger.wallet.debug("Decoding token for receive...")
+        let token: Token
+        do {
+            token = try Token.decode(encodedToken: tokenString)
+            AppLogger.wallet.debug("Token decoded for receive")
+        } catch {
+            AppLogger.wallet.error("receiveToken: Token.decode() failed - Type: \(String(describing: type(of: error))), Description: \(error.localizedDescription), Details: \(String(describing: error))")
+            throw error
+        }
+
+        let receiveOptions = ReceiveOptions(
+            amountSplitTarget: SplitTarget.none,
+            p2pkSigningKeys: [],
+            preimages: [],
+            metadata: [:]
+        )
+
+        // Step 2: Configure options based on trust decision
+        let transferMint: MintUrl?
+        if trustMint {
+            AppLogger.wallet.debug("Trust path: allowUntrusted=true, transferToMint=nil")
+            transferMint = nil
+        } else {
+            // Transfer to default mint when not trusting the source mint
+            if let defaultMintUrl = await getDefaultMint() {
+                AppLogger.wallet.debug("Transfer path: allowUntrusted=false, transferToMint=\(defaultMintUrl)")
+                transferMint = MintUrl(url: defaultMintUrl)
+            } else {
+                AppLogger.wallet.error("receiveToken failed: no default mint available for transfer")
+                throw WalletError.walletNotInitialized
+            }
+        }
+
+        let options = MultiMintReceiveOptions(
+            allowUntrusted: trustMint,
+            transferToMint: transferMint,
+            receiveOptions: receiveOptions
+        )
+
+        // Step 3: Call CDK receive
+        AppLogger.wallet.debug("Calling wallet.receive() with options: allowUntrusted=\(trustMint), transferToMint=\(transferMint?.url ?? "nil")")
+        do {
+            let receivedAmount = try await wallet.receive(token: token, options: options)
+            AppLogger.wallet.info("Received \(receivedAmount.value) sats successfully (trustMint: \(trustMint), transfer: \(transferMint?.url ?? "none"))")
+            return receivedAmount.value
+        } catch {
+            AppLogger.wallet.error("wallet.receive() failed - Type: \(String(describing: type(of: error))), Description: \(error.localizedDescription), Details: \(String(describing: error))")
             throw error
         }
     }
