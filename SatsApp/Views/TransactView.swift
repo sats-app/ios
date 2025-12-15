@@ -1,5 +1,6 @@
 import SwiftUI
 import CashuDevKit
+import CoreNFC
 
 enum TransactMode {
     case pay
@@ -244,6 +245,8 @@ struct TransactSheetView: View {
     @State private var errorMessage = ""
     @State private var hasCopied = false
     @State private var isSpent = false
+    @State private var isWritingNFC = false
+    @StateObject private var nfcService = NFCPaymentService()
     @State private var pollingTask: Task<Void, Never>?
     @State private var paymentSuccess = false
     @State private var paidAmount: UInt64 = 0
@@ -654,16 +657,16 @@ struct TransactSheetView: View {
                 }
 
                 Button(action: {
-                    // NFC placeholder - not implemented
+                    writeContentViaNFC()
                 }) {
-                    Image(systemName: "wave.3.right.circle")
+                    Image(systemName: isWritingNFC ? "wave.3.right.circle.fill" : "wave.3.right.circle")
                         .font(.title3)
-                        .foregroundColor(Color.orange)
+                        .foregroundColor(NFCPaymentService.isAvailable ? Color.orange : Color.gray)
                         .frame(width: 44, height: 44)
                         .background(Color.gray.opacity(0.1))
                         .clipShape(Circle())
                 }
-                .disabled(true)
+                .disabled(!NFCPaymentService.isAvailable || isWritingNFC)
             }
             .padding(.bottom, 20)
         }
@@ -695,6 +698,21 @@ struct TransactSheetView: View {
                 } catch {
                     // Silently continue polling on error
                     AppLogger.network.debug("Proof check failed: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+
+    private func writeContentViaNFC() {
+        isWritingNFC = true
+        nfcService.writeContent(generatedContent) { result in
+            DispatchQueue.main.async {
+                isWritingNFC = false
+                switch result {
+                case .success:
+                    AppLogger.network.info("Content written to NFC tag successfully")
+                case .failure(let error):
+                    AppLogger.network.error("NFC write failed: \(error.localizedDescription)")
                 }
             }
         }

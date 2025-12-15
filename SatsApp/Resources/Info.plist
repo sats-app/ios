@@ -50,6 +50,12 @@
     <string>Use Face ID to secure your wallet</string>
     <key>NSCameraUsageDescription</key>
     <string>This app needs camera access for scanning QR codes</string>
+    <key>NFCReaderUsageDescription</key>
+    <string>SatsApp uses NFC to make payments at compatible terminals</string>
+    <key>com.apple.developer.nfc.readersession.iso7816.select-identifiers</key>
+    <array>
+        <string>D276000085010100</string>
+    </array>
     <key>CFBundleURLTypes</key>
     <array>
         <dict>

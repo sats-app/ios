@@ -4,6 +4,7 @@ import URKit
 import URUI
 import Combine
 import CashuDevKit
+import CoreNFC
 
 // MARK: - Scanner State
 
@@ -287,6 +288,7 @@ struct QRScannerView: View {
     @State private var state: ScannerState = .scanning
     @State private var showingResultSheet = false
     @State private var showingTrustAlert = false
+    @State private var showingNFCPayment = false
     @State private var tokenDetails: TokenDetails?
     @State private var defaultMintName: String = ""
     @State private var cancellables = Set<AnyCancellable>()
@@ -331,6 +333,10 @@ struct QRScannerView: View {
         }
         .sheet(isPresented: $showingResultSheet) {
             resultSheetContent
+        }
+        .sheet(isPresented: $showingNFCPayment) {
+            NFCPaymentView()
+                .environmentObject(walletManager)
         }
         .alert("Trust This Mint?", isPresented: $showingTrustAlert) {
             trustAlertButtons
@@ -422,8 +428,16 @@ struct QRScannerView: View {
 
             Spacer()
 
-            // Placeholder for symmetry
-            Color.clear.frame(width: 44, height: 44)
+            // NFC button for tap-to-pay with Numo terminals
+            Button(action: { showingNFCPayment = true }) {
+                Image(systemName: "wave.3.right.circle")
+                    .font(.title2)
+                    .foregroundColor(NFCPaymentService.isAvailable ? .white : .gray)
+                    .padding(12)
+                    .background(Color.black.opacity(0.5))
+                    .clipShape(Circle())
+            }
+            .disabled(!NFCPaymentService.isAvailable)
         }
         .padding(.horizontal)
         .padding(.top, 8)
